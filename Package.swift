@@ -14,10 +14,8 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(path: "../ForgeBase"),
-        .package(path: "../ForgeLogKit"),
-//        .package(url: "https://github.com/CoderQuinn/ForgeBase.git", from: "0.0.1"),
-//        .package(url: "https://github.com/CoderQuinn/ForgeLogKit.git", from: "0.1.0"),
+        .package(url: "https://github.com/CoderQuinn/ForgeBase.git", from: "0.1.0"),
+        .package(url: "https://github.com/CoderQuinn/ForgeLogKit.git", from: "0.2.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
         .package(url: "https://github.com/apple/swift-nio-transport-services.git", from: "1.19.0"),
     ],
