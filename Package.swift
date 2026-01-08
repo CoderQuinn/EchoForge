@@ -14,11 +14,12 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/CoderQuinn/ForgeBase.git", from: "0.0.1"),
-        .package(url: "https://github.com/CoderQuinn/ForgeLogKit.git", from: "0.1.0"),
+        .package(path: "../ForgeBase"),
+        .package(path: "../ForgeLogKit"),
+//        .package(url: "https://github.com/CoderQuinn/ForgeBase.git", from: "0.0.1"),
+//        .package(url: "https://github.com/CoderQuinn/ForgeLogKit.git", from: "0.1.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0"),
         .package(url: "https://github.com/apple/swift-nio-transport-services.git", from: "1.19.0"),
-        .package(url: "https://github.com/orlandos-nl/DNSClient.git", from: "2.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -31,7 +32,9 @@ let package = Package(
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "NIOTransportServices", package: "swift-nio-transport-services"),
-                .product(name: "DNSClient", package: "DNSClient"),
+            ],
+            swiftSettings: [
+                .define("NFDLOG_DISABLED", .when(configuration: .debug)),
             ]
         ),
     ]

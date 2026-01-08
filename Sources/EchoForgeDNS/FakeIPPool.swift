@@ -4,10 +4,9 @@
 //
 //  Created by MagicianQuinn on 2025/12/11.
 //
-/// NOTE:
-/// Fake IPs are NOT released in current phase.
-/// LRU eviction will be implemented together with SOCKS5 / UDP NAT,
-/// where "usage" semantics are well-defined.
+//  Fake IPv4 pool + reverse mapping.
+//  NOTE: IPv4 only; IPv6 is strategically ignored for now.
+//
 
 import ForgeBase
 import Foundation
@@ -15,9 +14,11 @@ import Network
 import NIO
 
 /// Fake IPv4 pool for DNS interception.
-/// Convention:
-/// - All UInt32 values are NETWORK BYTE ORDER (BE)
-/// - Public API only exposes IPv4Address
+///
+/// Conventions:
+/// - All UInt32 values are NETWORK BYTE ORDER (big-endian)
+/// - Only IPs actually allocated by this pool are considered "fake"
+/// - Must be accessed from the bound EventLoop
 public final class FakeIPPool {
     private let eventLoop: EventLoop
 
@@ -25,14 +26,21 @@ public final class FakeIPPool {
     private let baseBE: UInt32
     private let prefixLength: Int
 
-    /// Total usable host count (excluding network / broadcast)
+    /// Host mask (low bits)
+    private let hostMask: UInt32
+
+    /// Maximum usable hosts (excluding network / broadcast)
     private let capacity: UInt32
 
-    /// Current offset [1 .. capacity]
+    /// Current host offset (host bits only)
+    /// Range: [2 ..< hostMask)
     private var offset: UInt32 = 1
 
+    /// Forward / reverse maps
     private var ipToDomain: [IPv4Address: String] = [:]
     private var domainToIp: [String: IPv4Address] = [:]
+
+    // MARK: - Init
 
     public init(
         cidr: String = "198.18.0.0/16",
@@ -42,21 +50,21 @@ public final class FakeIPPool {
 
         let parsed = FBIPv4Parse.parseCIDR(cidr)
 
-        let fallback: UInt32 = 0xC612_0000 // "198.18.0.0"
-        let networkBE = parsed?.networkBE ?? fallback
+        // Fallback: 198.18.0.0/16 (RFC 2544 benchmarking)
+        let fallbackNetworkBE: UInt32 = 0xC612_0000
+        let fallbackPrefix = 16
 
-        let prefixLength = parsed?.prefixLength ?? 16
+        baseBE = parsed?.networkBE ?? fallbackNetworkBE
+        prefixLength = parsed?.prefixLength ?? fallbackPrefix
+
         let hostBits = UInt32(32 - prefixLength)
+        hostMask = (hostBits == 32) ? UInt32.max : ((1 << hostBits) - 1)
 
-        baseBE = networkBE
-        self.prefixLength = prefixLength
+        // Exclude network (0) and broadcast (hostMask)
+        let usableHosts =
+            hostMask > 2 ? hostMask - 2 : 0
 
-        let totalHosts = UInt64(1) << UInt64(hostBits)
-        let usable =
-            totalHosts > 3 ? totalHosts - 3 : 0 // exclude network/broadcast
-
-        capacity = UInt32(min(usable, UInt64(UInt32.max)))
-        offset = 2
+        capacity = usableHosts
     }
 
     // MARK: - Allocation
@@ -66,28 +74,45 @@ public final class FakeIPPool {
     public func assign(domain: String) -> IPv4Address? {
         eventLoop.assertInEventLoop()
 
-        let now = NIODeadline.now()
+        let key = normalize(domain: domain)
 
-        if let ip = domainToIp[domain] {
+        if let ip = domainToIp[key] {
+            EFDLog.fakeip("reuse domain=\(key) ip=\(ip)")
             return ip
         }
 
-        guard capacity > 1 else { return nil }
+        guard capacity > 0 else { return nil }
 
-        for _ in 0 ..< Int(capacity) {
-            let candidateBE = baseBE &+ offset
-            offset = (offset % capacity) + 1
+        for _ in 0 ..< capacity {
+            let host = offset
+            offset += 1
+            if offset >= hostMask {
+                offset = 2 // wrap back to first usable fake IP
+            }
 
-            guard let ip = FBIPv4(beValue: candidateBE).asNetworkIPv4Address, ipToDomain[ip] == nil else {
+            // Skip:
+            // 0 -> network
+            // 1 -> local reserved (198.18.0.1)
+            // hostMask -> broadcast
+            if host <= 1 || host == hostMask {
                 continue
             }
 
-            domainToIp[domain] = ip
-            ipToDomain[ip] = domain
+            let candidateBE = baseBE | host
+
+            guard let ip = FBIPv4(beValue: candidateBE).asNetworkIPv4Address,
+                  ipToDomain[ip] == nil
+            else {
+                continue
+            }
+
+            domainToIp[key] = ip
+            ipToDomain[ip] = key
+            EFDLog.fakeip("assign domain=\(key) ip=\(ip)")
             return ip
         }
 
-        // pool exhausted
+        // Pool exhausted
         return nil
     }
 
@@ -96,26 +121,26 @@ public final class FakeIPPool {
     /// Reverse lookup fake IP → domain.
     /// Must be called on pool eventLoop.
     public func reverseLookup(_ ip: IPv4Address) -> String? {
-        eventLoop.assertInEventLoop()
-        return ipToDomain[ip]
+        let d = ipToDomain[ip]
+        if d == nil {
+            EFDLog.fakeip("reverse miss ip=\(ip)")
+        }
+        return d
     }
 
+    /// Check if IP was allocated by this pool.
+    /// CIDR containment alone is NOT sufficient.
     public func isFakeIP(_ ip: IPv4Address) -> Bool {
         eventLoop.assertInEventLoop()
-        return FBIPv4CIDR.contains(address: ip, networkBE: baseBE, prefixLength: prefixLength)
+        return ipToDomain[ip] != nil
     }
 
-    // MARK: - debug-only
+    // MARK: - Helpers
 
-    #if DEBUG
-        /// Clear all mappings.
-        /// Must be called on pool eventLoop.
-        public func clear() {
-            eventLoop.assertInEventLoop()
-
-            ipToDomain.removeAll()
-            domainToIp.removeAll()
-            offset = 2
-        }
-    #endif
+    @inline(__always)
+    private func normalize(domain: String) -> String {
+        domain
+            .lowercased()
+            .trimmingCharacters(in: CharacterSet(charactersIn: "."))
+    }
 }
