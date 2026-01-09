@@ -219,7 +219,7 @@ public final class DNSService {
         guard let fakeIP = ipPool.assign(domain: domain) else {
             EFDLog.error("fakeIP pool exhausted domain=\(domain)")
             // pool exhausted
-            let qraw = DNSFastSniffer.sniffQuery(Data())?.questionRaw ?? Data()
+            let qraw = DNSFastSniffer.sniffQuery(query.raw)?.questionRaw ?? Data()
             return eventLoop.makeSucceededFuture(
                 FakeDNSResponseBuilder.buildServFail(id: query.header.id, originalQuestion: qraw)
             )
