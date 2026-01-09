@@ -282,7 +282,6 @@ public final class DNSService {
 
         let ips = MinimalAAnswerExtractor.extractAAnswers(response)
         if !ips.isEmpty {
-            let fakeIP = entry.fakeIP
             entry.realIPs = ips
             cache.insert(entry)
         }
