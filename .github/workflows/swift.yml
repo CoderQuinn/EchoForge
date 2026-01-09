@@ -29,17 +29,17 @@ jobs:
           echo "branch=$RELEASE_BRANCH" >> $GITHUB_OUTPUT
 
       - name: Create back-merge PR
-        uses: peter-evans/create-pull-request@v6
+        uses: repo-sync/pull-request@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          base: main
-          head: ${{ steps.release.outputs.branch }}
-          title: "chore: back-merge ${{ steps.release.outputs.branch }} into main"
-          body: |
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: ${{ steps.release.outputs.branch }}
+          destination_branch: main
+          pr_title: "chore: back-merge ${{ steps.release.outputs.branch }} into main"
+          pr_body: |
             Automated back-merge after release tag ${{ github.ref_name }}.
             - Source: ${{ steps.release.outputs.branch }}
             - Target: main
-          labels: |
+          pr_label: |
             release
             backmerge
 
