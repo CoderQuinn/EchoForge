@@ -21,11 +21,6 @@ import Foundation
 import Network
 import NIO
 
-/// DNS fake / dial ready notification
-protocol DNSDialReadyObserver: AnyObject {
-    func dnsDialReady(fakeIP: IPv4Address)
-}
-
 public struct DialDecision {
     public let dialIP: IPv4Address?
     public let dialHost: String?
