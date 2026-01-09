@@ -35,5 +35,9 @@ let package = Package(
                 .define("NFDLOG_DISABLED", .when(configuration: .debug)),
             ]
         ),
+        .testTarget(
+            name: "EchoForgeDNSTests",
+            dependencies: ["EchoForgeDNS"]
+        ),
     ]
 )
