@@ -34,7 +34,7 @@ public final class FakeIPPool {
 
     /// Current host offset (host bits only)
     /// Range: [2 ..< hostMask)
-    private var offset: UInt32 = 1
+    private var offset: UInt32 = 2
 
     /// Forward / reverse maps
     private var ipToDomain: [IPv4Address: String] = [:]
