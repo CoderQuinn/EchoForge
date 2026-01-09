@@ -33,8 +33,8 @@ public final class FakeIPPool {
     private let capacity: UInt32
 
     /// Current host offset (host bits only)
-    /// Range: [2 ..< hostMask)
-    private var offset: UInt32 = 2
+    /// Range: [1 ..< hostMask)
+    private var offset: UInt32 = 1
 
     /// Forward / reverse maps
     private var ipToDomain: [IPv4Address: String] = [:]
@@ -62,7 +62,7 @@ public final class FakeIPPool {
 
         // Exclude network (0) and broadcast (hostMask)
         let usableHosts =
-            hostMask > 2 ? hostMask - 2 : 0
+            hostMask > 1 ? hostMask - 1 : 0
 
         capacity = usableHosts
     }
@@ -87,14 +87,13 @@ public final class FakeIPPool {
             let host = offset
             offset += 1
             if offset >= hostMask {
-                offset = 2 // wrap back to first usable fake IP
+                offset = 1 // wrap back to first usable fake IP
             }
 
             // Skip:
             // 0 -> network
-            // 1 -> local reserved (198.18.0.1)
             // hostMask -> broadcast
-            if host <= 1 || host == hostMask {
+            if host == 0 || host == hostMask {
                 continue
             }
 

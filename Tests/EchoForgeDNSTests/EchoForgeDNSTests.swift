@@ -16,6 +16,34 @@ final class FakeIPPoolTests: XCTestCase {
             XCTAssertTrue(pool.isFakeIP(ip!))
         }
     }
+    
+    func testSmallNetworkCapacity() {
+        // Test /30 network (hostMask = 3)
+        // Should have 2 usable hosts: addresses 1 and 2
+        // (0 = network, 3 = broadcast)
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try? group.syncShutdownGracefully() }
+        let loop = group.next()
+        let pool = FakeIPPool(cidr: "192.168.1.0/30", on: loop)
+        loop.execute {
+            let domain1 = "test1.com"
+            let domain2 = "test2.com"
+            let domain3 = "test3.com"
+            
+            let ip1 = pool.assign(domain: domain1)
+            XCTAssertNotNil(ip1, "First allocation should succeed")
+            
+            let ip2 = pool.assign(domain: domain2)
+            XCTAssertNotNil(ip2, "Second allocation should succeed")
+            
+            // Third allocation should fail as pool is exhausted
+            let ip3 = pool.assign(domain: domain3)
+            XCTAssertNil(ip3, "Third allocation should fail - pool exhausted")
+            
+            // Verify IPs are different
+            XCTAssertNotEqual(ip1, ip2, "Allocated IPs should be different")
+        }
+    }
 }
 
 final class DNSCacheTests: XCTestCase {
