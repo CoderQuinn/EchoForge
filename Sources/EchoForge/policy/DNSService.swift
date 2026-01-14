@@ -290,19 +290,8 @@ public final class DNSService {
     }
 
     private func prefetchAIfNeeded(domain: String, buffer: FBPacketBuffer) {
-        eventLoop.assertInEventLoop()
-
-        let key = DNSCacheKey(domain: domain, type: .a)
-        if caches.lookup(key)?.realIPs != nil { return }
-
-        // Build a simple A query for domain, using random txid; upstream relay rewrites anyway.
-        let payload = buffer.materialize()
-        upstream.query(payload).whenSuccess { [weak self] resp in
-            guard let self else { return }
-            self.eventLoop.execute {
-                self.onPrefetchAResult(domain: domain, response: resp)
-            }
-        }
+        // Delegate to the main implementation to ensure correct query type
+        prefetchAIfNeeded(domain: domain)
     }
 
     private func onPrefetchAResult(domain: String, response: Data) {
