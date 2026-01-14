@@ -57,7 +57,7 @@ public final class DNSCache {
             return nil
         }
 
-        if entry.expireAt < .now() {
+        if entry.expireAt <= .now() {
             caches.removeValue(forKey: key)
 
             EFLog.cache("expired domain=\(key.domain) fakeIP=\(entry.fakeIP)")
@@ -90,7 +90,7 @@ public final class DNSCache {
 
         var expiredEntries: [DNSCacheEntry] = []
 
-        let expiredKeys: [DNSCacheKey] = caches.filter { $0.value.expireAt < now }.map { $0.key }
+        let expiredKeys: [DNSCacheKey] = caches.filter { $0.value.expireAt <= now }.map { $0.key }
         for key: DNSCacheKey in expiredKeys {
             if let entry = caches.removeValue(forKey: key) {
                 expiredEntries.append(entry)
