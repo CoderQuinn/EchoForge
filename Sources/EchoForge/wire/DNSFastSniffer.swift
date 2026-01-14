@@ -23,7 +23,7 @@ public enum DNSFastSniffer {
     private static func skipQNameNoPointer(buffer: FBPacketBuffer, offset: inout Int) -> Bool {
         // [length][label bytes][length][label bytes]...[0]
         var len = 0
-        var totalConsumed = 0 // includes length octets and label bytes
+        var totalConsumed = 0  // includes length octets and label bytes
         repeat {
             guard let len8 = buffer.loadUInt8(at: offset) else { return false }
             len = Int(len8)
