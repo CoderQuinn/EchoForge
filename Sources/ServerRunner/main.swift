@@ -1,4 +1,4 @@
-import EchoForgeDNS
+import EchoForge
 import Foundation
 import NIO
 
