@@ -16,7 +16,7 @@ import ForgeLogKit
  */
 
 public enum EFLog {
-    #if FORGELOG_DISABLED
+    #if !FORGELOG_DISABLED
 
         @inline(__always) public static func info(_: String) {}
         @inline(__always) public static func debug(_: String) {}
