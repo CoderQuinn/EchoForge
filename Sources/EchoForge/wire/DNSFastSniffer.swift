@@ -47,8 +47,8 @@ public enum DNSFastSniffer {
         guard buffer.readableBytes >= 12 else { return nil }
 
         guard let id = buffer.loadUInt16(at: 0),
-              let flags = buffer.loadUInt16(at: 2),
-              let qdcount = buffer.loadUInt16(at: 4)
+            let flags = buffer.loadUInt16(at: 2),
+            let qdcount = buffer.loadUInt16(at: 4)
         else {
             return nil
         }
@@ -66,7 +66,7 @@ public enum DNSFastSniffer {
         guard qnameEnd + 4 <= buffer.readableBytes else { return nil }
 
         guard let qtypeRaw = buffer.loadUInt16(at: qnameEnd),
-              let qclassRaw = buffer.loadUInt16(at: qnameEnd + 2)
+            let qclassRaw = buffer.loadUInt16(at: qnameEnd + 2)
         else { return nil }
 
         guard let qtype = DNSType(rawValue: qtypeRaw) else {
@@ -74,7 +74,7 @@ public enum DNSFastSniffer {
         }
 
         guard let qclass = DNSClass(rawValue: qclassRaw),
-              qclass == .internet
+            qclass == .internet
         else {
             return nil
         }

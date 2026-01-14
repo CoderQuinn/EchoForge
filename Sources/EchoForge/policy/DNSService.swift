@@ -24,8 +24,8 @@
 
 import ForgeBase
 import Foundation
-import Network
 import NIO
+import Network
 
 public struct DialDecision {
     public let dialIP: IPv4Address?
@@ -53,12 +53,17 @@ public final class DNSService {
         self.ttl = ttl
         caches = DNSCache(eventLoop: eventLoop)
         ipPool = FakeIPPool(on: eventLoop)
-        upstream = DNSUpstreamUDPRelay(eventLoop: eventLoop, upstream: .init(host: upstreamHost, port: UInt16(upstreamPort)))
+        upstream = DNSUpstreamUDPRelay(
+            eventLoop: eventLoop,
+            upstream: .init(host: upstreamHost, port: UInt16(upstreamPort))
+        )
     }
 
     // MARK: - Public API (any loop)
 
-    public func handleDNSPayload(_ buffer: FBPacketBuffer, _ callerLoop: EventLoop) -> EventLoopFuture<Data?> {
+    public func handleDNSPayload(_ buffer: FBPacketBuffer, _ callerLoop: EventLoop)
+        -> EventLoopFuture<Data?>
+    {
         let fast = DNSFastSniffer.sniffQuery(buffer)
         let decision = DNSPolicyEngine.decide(fast)
 
@@ -74,7 +79,11 @@ public final class DNSService {
 
     // MARK: - Internal (eventLoop only)
 
-    private func handlerInternal(_ buffer: FBPacketBuffer, fast: SniffedDNSQuery?, decision: DNSPolicyDecision) -> EventLoopFuture<Data?> {
+    private func handlerInternal(
+        _ buffer: FBPacketBuffer,
+        fast: SniffedDNSQuery?,
+        decision: DNSPolicyDecision
+    ) -> EventLoopFuture<Data?> {
         switch decision {
         case .handleLocally:
             return handleSlow(buffer: buffer, fast: fast)
@@ -93,12 +102,14 @@ public final class DNSService {
                 )
             )
         case .passthrough:
-            
+
             return handleUpstream(buffer: buffer, fast: fast)
         }
     }
 
-    private func handleSlow(buffer: FBPacketBuffer, fast: SniffedDNSQuery?) -> EventLoopFuture<Data?> {
+    private func handleSlow(buffer: FBPacketBuffer, fast: SniffedDNSQuery?) -> EventLoopFuture<
+        Data?
+    > {
         eventLoop.assertInEventLoop()
 
         let query: DNSQuery
@@ -124,7 +135,11 @@ public final class DNSService {
     private func makeFormError(fast: SniffedDNSQuery?) -> EventLoopFuture<Data?> {
         let id = fast?.id ?? 0
         let query = fast?.question.materialize() ?? Data()
-        let resp = DNSMessageBuilder.buildRefuseResponse(id: id, rcode: .formatError, originalQuestion: query)
+        let resp = DNSMessageBuilder.buildRefuseResponse(
+            id: id,
+            rcode: .formatError,
+            originalQuestion: query
+        )
         return eventLoop.makeSucceededFuture(resp)
     }
 
@@ -137,12 +152,19 @@ public final class DNSService {
         let key = DNSCacheKey(domain: domain, type: .a)
 
         if let cached = caches.lookup(key) {
-            let resp = DNSMessageBuilder.buildAResponse(query: query, fakeIPv4: cached.fakeIP, ttl: UInt32(ttl))
+            let resp = DNSMessageBuilder.buildAResponse(
+                query: query,
+                fakeIPv4: cached.fakeIP,
+                ttl: UInt32(ttl)
+            )
             return eventLoop.makeSucceededFuture(resp)
         }
 
         guard let fakeIP = ipPool.assign(domain: domain) else {
-            let resp = DNSMessageBuilder.buildServFailResponse(id: query.header.id, originalQuestion: Data())
+            let resp = DNSMessageBuilder.buildServFailResponse(
+                id: query.header.id,
+                originalQuestion: Data()
+            )
             return eventLoop.makeSucceededFuture(resp)
         }
 
@@ -151,23 +173,42 @@ public final class DNSService {
 
         prefetchAIfNeeded(domain: domain, buffer: buffer)
 
-        let resp = DNSMessageBuilder.buildAResponse(query: query, fakeIPv4: fakeIP, ttl: UInt32(ttl))
+        let resp = DNSMessageBuilder.buildAResponse(
+            query: query,
+            fakeIPv4: fakeIP,
+            ttl: UInt32(ttl)
+        )
         return eventLoop.makeSucceededFuture(resp)
     }
 
     // MARK: - AAAA fallback (policy: IPv6 not supported, synthesize A)
 
-    private func handleAAAAQueryFallback(query: DNSQuery, buffer: FBPacketBuffer) -> EventLoopFuture<Data?> {
-        return eventLoop.makeSucceededFuture(DNSMessageBuilder.buildNoAnswerResponse(id: query.header.id, originalQuestion: query.question.toData()))
+    private func handleAAAAQueryFallback(query: DNSQuery, buffer: FBPacketBuffer)
+        -> EventLoopFuture<Data?>
+    {
+        return eventLoop.makeSucceededFuture(
+            DNSMessageBuilder.buildNoAnswerResponse(
+                id: query.header.id,
+                originalQuestion: query.question.toData()
+            )
+        )
     }
 
     // MARK: - PTR(fake-ip)
 
-    private func handlePTRQuery(query: DNSQuery, buffer: FBPacketBuffer, fast: SniffedDNSQuery?) -> EventLoopFuture<Data?> {
+    private func handlePTRQuery(query: DNSQuery, buffer: FBPacketBuffer, fast: SniffedDNSQuery?)
+        -> EventLoopFuture<Data?>
+    {
         eventLoop.assertInEventLoop()
 
-        if let v4 = parseInAddrArpa(query.question.name), ipPool.isFakeIP(v4), let domain = ipPool.reverseLookup(v4) {
-            let resp = DNSMessageBuilder.builePTRResponse(query: query, ptrDomain: domain, ttl: UInt32(ttl))
+        if let v4 = parseInAddrArpa(query.question.name), ipPool.isFakeIP(v4),
+            let domain = ipPool.reverseLookup(v4)
+        {
+            let resp = DNSMessageBuilder.builePTRResponse(
+                query: query,
+                ptrDomain: domain,
+                ttl: UInt32(ttl)
+            )
             return eventLoop.makeSucceededFuture(resp)
         }
 
@@ -199,25 +240,35 @@ public final class DNSService {
             }
     }
 
-    public func resolveDialDecision(_ dstIP: IPv4Address, _ callerLoop: EventLoop) -> EventLoopFuture<DialDecision> {
+    public func resolveDialDecision(_ dstIP: IPv4Address, _ callerLoop: EventLoop)
+        -> EventLoopFuture<DialDecision>
+    {
         return eventLoop.flatSubmit { [weak self] in
             let direct = DialDecision(dialIP: dstIP, dialHost: nil, fromFakeIP: false)
             guard let self else { return callerLoop.makeSucceededFuture(direct) }
 
             self.eventLoop.assertInEventLoop()
-            guard self.ipPool.isFakeIP(dstIP) else { return self.eventLoop.makeSucceededFuture(direct) }
+            guard self.ipPool.isFakeIP(dstIP) else {
+                return self.eventLoop.makeSucceededFuture(direct)
+            }
 
             guard let domain = self.ipPool.reverseLookup(dstIP) else {
-                return self.eventLoop.makeSucceededFuture(DialDecision(dialIP: nil, dialHost: nil, fromFakeIP: true))
+                return self.eventLoop.makeSucceededFuture(
+                    DialDecision(dialIP: nil, dialHost: nil, fromFakeIP: true)
+                )
             }
 
             let key = DNSCacheKey(domain: domain, type: .a)
             if let real = self.caches.lookup(key)?.realIPs?.first {
-                return self.eventLoop.makeSucceededFuture(DialDecision(dialIP: real, dialHost: nil, fromFakeIP: true))
+                return self.eventLoop.makeSucceededFuture(
+                    DialDecision(dialIP: real, dialHost: nil, fromFakeIP: true)
+                )
             }
 
             self.prefetchAIfNeeded(domain: domain)
-            return self.eventLoop.makeSucceededFuture(DialDecision(dialIP: nil, dialHost: domain, fromFakeIP: true))
+            return self.eventLoop.makeSucceededFuture(
+                DialDecision(dialIP: nil, dialHost: domain, fromFakeIP: true)
+            )
         }.hop(to: callerLoop)
     }
 
@@ -315,7 +366,8 @@ public final class DNSService {
 
         let reversed = parts.reversed().joined(separator: ".")
 
-        return FBIPv4Parse
+        return
+            FBIPv4Parse
             .parseDottedDecimal(Substring(reversed))?
             .asNetworkIPv4Address
     }

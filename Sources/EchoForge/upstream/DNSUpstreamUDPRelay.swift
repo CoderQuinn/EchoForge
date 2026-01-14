@@ -51,7 +51,10 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
             return eventLoop.makeSucceededVoidFuture()
         }
         do {
-            remoteAddress = try SocketAddress.makeAddressResolvingHost(upstream.host, port: Int(upstream.port))
+            remoteAddress = try SocketAddress.makeAddressResolvingHost(
+                upstream.host,
+                port: Int(upstream.port)
+            )
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
@@ -61,7 +64,8 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
                 channel.pipeline.addHandler(
                     UDPRelayInbound { [weak self] envelope in
                         self?.onRead(envelope)
-                    })
+                    }
+                )
             }
         return bootstrap.bind(host: "0.0.0.0", port: 0).map { [weak self] ch in
             self?.channel = ch
@@ -83,7 +87,9 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
         pendingMap.removeAll()
     }
 
-    public func query(_ originalPayload: Data, timeout: TimeAmount = .seconds(3)) -> EventLoopFuture<Data> {
+    public func query(_ originalPayload: Data, timeout: TimeAmount = .seconds(3))
+        -> EventLoopFuture<Data>
+    {
         eventLoop.assertInEventLoop()
 
         guard originalPayload.count >= 12 else {
@@ -114,12 +120,19 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
                     pending.promise.fail(DNSUpstreamError.timeout)
                 }
             }
-            self.pendingMap[rewrittedID] = PendingQuery(originalID: originalID, promise: promise, timeoutTask: task)
+            self.pendingMap[rewrittedID] = PendingQuery(
+                originalID: originalID,
+                promise: promise,
+                timeoutTask: task
+            )
 
             var buf = ByteBufferAllocator().buffer(capacity: payload.count)
             buf.writeBytes(payload)
 
-            ch.writeAndFlush(AddressedEnvelope(remoteAddress: remoteAddress, data: buf), promise: nil)
+            ch.writeAndFlush(
+                AddressedEnvelope(remoteAddress: remoteAddress, data: buf),
+                promise: nil
+            )
             return promise.futureResult
         }
     }
@@ -128,7 +141,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
         eventLoop.assertInEventLoop()
 
         // Ensure no collision with currently pending rewritten IDs
-        for _ in 0 ..< UInt16.max {
+        for _ in 0..<UInt16.max {
             let id = nextID
             nextID &+= 1
             if nextID == 0 { nextID = 1 }
@@ -137,7 +150,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
             }
         }
         // Extremely unlikely: pending table full
-        return UInt16.random(in: 1 ... UInt16.max)
+        return UInt16.random(in: 1...UInt16.max)
     }
 
     private func onRead(_ envelope: AddressedEnvelope<ByteBuffer>) {
@@ -148,14 +161,14 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
         // Security: Validate that the datagram is from the configured upstream server
         // to prevent DNS spoofing attacks from unauthorized sources
         guard let expectedRemote = remoteAddress,
-              envelope.remoteAddress == expectedRemote
+            envelope.remoteAddress == expectedRemote
         else {
             return
         }
 
         var buf = envelope.data
         guard let bytes = buf.readBytes(length: buf.readableBytes),
-              bytes.count >= 2
+            bytes.count >= 2
         else {
             return
         }

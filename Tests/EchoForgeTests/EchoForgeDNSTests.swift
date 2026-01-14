@@ -1,8 +1,9 @@
-@testable import EchoForge
 import Foundation
-import Network
 import NIO
+import Network
 import XCTest
+
+@testable import EchoForge
 
 final class FakeIPPoolTests: XCTestCase {
     func testAssignAndReverseLookup() {
@@ -41,7 +42,7 @@ final class FakeIPPoolTests: XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { try? group.syncShutdownGracefully() }
         let loop = group.next()
-        let pool = FakeIPPool(cidr: "198.18.0.0/29", on: loop) // 4 usable hosts
+        let pool = FakeIPPool(cidr: "198.18.0.0/29", on: loop)  // 4 usable hosts
         let exp = expectation(description: "exhaustion")
 
         loop.execute {
@@ -84,7 +85,12 @@ final class DNSCacheTests: XCTestCase {
         let cache = DNSCache(eventLoop: loop)
         let key = DNSCacheKey(domain: "a.com", type: .a)
         let fake = IPv4Address("198.18.1.2")!
-        let entry = DNSCacheEntry(key: key, fakeIP: fake, expireAt: .now() + .seconds(10), realIPs: [IPv4Address("1.2.3.4")!])
+        let entry = DNSCacheEntry(
+            key: key,
+            fakeIP: fake,
+            expireAt: .now() + .seconds(10),
+            realIPs: [IPv4Address("1.2.3.4")!]
+        )
         loop.execute {
             cache.insert(entry)
             let result = cache.lookup(key)
@@ -100,7 +106,12 @@ final class DNSCacheTests: XCTestCase {
         let cache = DNSCache(eventLoop: loop)
         let key = DNSCacheKey(domain: "b.com", type: .a)
         let fake = IPv4Address("198.18.1.3")!
-        let entry = DNSCacheEntry(key: key, fakeIP: fake, expireAt: .now() - .seconds(1), realIPs: nil)
+        let entry = DNSCacheEntry(
+            key: key,
+            fakeIP: fake,
+            expireAt: .now() - .seconds(1),
+            realIPs: nil
+        )
         loop.execute {
             cache.insert(entry)
             cache.sweepExpired { removed in
@@ -117,13 +128,17 @@ final class DNSCacheTests: XCTestCase {
         let loop = group.next()
         let cache = DNSCache(eventLoop: loop)
         let key = DNSCacheKey(domain: "expired.com", type: .a)
-        let entry = DNSCacheEntry(key: key, fakeIP: IPv4Address("198.18.1.10")!, expireAt: .now() - .seconds(1))
+        let entry = DNSCacheEntry(
+            key: key,
+            fakeIP: IPv4Address("198.18.1.10")!,
+            expireAt: .now() - .seconds(1)
+        )
         let exp = expectation(description: "lookup expired")
 
         loop.execute {
             cache.insert(entry)
             XCTAssertNil(cache.lookup(key))
-            XCTAssertNil(cache.lookup(key)) // second lookup should also miss
+            XCTAssertNil(cache.lookup(key))  // second lookup should also miss
             exp.fulfill()
         }
 
@@ -137,8 +152,16 @@ final class DNSCacheTests: XCTestCase {
         let cache = DNSCache(eventLoop: loop)
         let expiredKey = DNSCacheKey(domain: "old.com", type: .a)
         let liveKey = DNSCacheKey(domain: "live.com", type: .a)
-        let expiredEntry = DNSCacheEntry(key: expiredKey, fakeIP: IPv4Address("198.18.1.11")!, expireAt: .now() - .seconds(1))
-        let liveEntry = DNSCacheEntry(key: liveKey, fakeIP: IPv4Address("198.18.1.12")!, expireAt: .now() + .seconds(30))
+        let expiredEntry = DNSCacheEntry(
+            key: expiredKey,
+            fakeIP: IPv4Address("198.18.1.11")!,
+            expireAt: .now() - .seconds(1)
+        )
+        let liveEntry = DNSCacheEntry(
+            key: liveKey,
+            fakeIP: IPv4Address("198.18.1.12")!,
+            expireAt: .now() + .seconds(30)
+        )
         let exp = expectation(description: "sweep mixed")
 
         loop.execute {
@@ -161,7 +184,10 @@ final class DNSUpstreamUDPRelayTests: XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { try? group.syncShutdownGracefully() }
         let loop = group.next()
-        let relay = DNSUpstreamUDPRelay(eventLoop: loop, upstream: Upstream(host: "127.0.0.1", port: 9))
+        let relay = DNSUpstreamUDPRelay(
+            eventLoop: loop,
+            upstream: Upstream(host: "127.0.0.1", port: 9)
+        )
         let exp = expectation(description: "timeout")
 
         loop.execute {

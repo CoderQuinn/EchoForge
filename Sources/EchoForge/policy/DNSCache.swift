@@ -8,8 +8,8 @@
 //
 
 import Foundation
-import Network
 import NIO
+import Network
 
 public struct DNSCacheKey: Hashable {
     let domain: String
@@ -28,7 +28,12 @@ public struct DNSCacheEntry {
     /// Optional: real A results fetched from upstream (prefetch).
     var realIPs: [IPv4Address]?
 
-    init(key: DNSCacheKey, fakeIP: IPv4Address, expireAt: NIODeadline, realIPs: [IPv4Address]? = nil) {
+    init(
+        key: DNSCacheKey,
+        fakeIP: IPv4Address,
+        expireAt: NIODeadline,
+        realIPs: [IPv4Address]? = nil
+    ) {
         self.key = key
         self.fakeIP = fakeIP
         self.expireAt = expireAt
@@ -74,7 +79,8 @@ public final class DNSCache {
             )
         } else {
             EFLog.cache(
-                "insert domain=\(entry.key.domain) fakeIP=\(entry.fakeIP)")
+                "insert domain=\(entry.key.domain) fakeIP=\(entry.fakeIP)"
+            )
         }
         caches[entry.key] = entry
     }

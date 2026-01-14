@@ -49,7 +49,14 @@ public enum MinimalDNSParser {
         let ns = try readU16()
         let ar = try readU16()
 
-        let header = DNSHeader(id: id, flags: flags, qdCount: qd, anCount: an, nsCount: ns, arCount: ar)
+        let header = DNSHeader(
+            id: id,
+            flags: flags,
+            qdCount: qd,
+            anCount: an,
+            nsCount: ns,
+            arCount: ar
+        )
 
         guard !header.isResponse else {
             throw ParseError.notQuery
@@ -62,11 +69,14 @@ public enum MinimalDNSParser {
         let qtype = try DNSType(rawValue: readU16()) ?? .invalid
         let qclass = try DNSClass(rawValue: readU16()) ?? .any
 
-        return DNSQuery(header: header, question: DNSQuestion(name: name, type: qtype, qclass: qclass))
+        return DNSQuery(
+            header: header,
+            question: DNSQuestion(name: name, type: qtype, qclass: qclass)
+        )
     }
 
     public static func extractAnswers(from buffer: FBPacketBuffer) -> ([IPv4Address], Int) {
-        let placeholder: ([IPv4Address], Int) = ([], 0) // IP and ttl
+        let placeholder: ([IPv4Address], Int) = ([], 0)  // IP and ttl
         guard buffer.readableBytes >= 12 else {
             return placeholder
         }
@@ -89,31 +99,31 @@ public enum MinimalDNSParser {
             return v
         }
 
-        let id = try? readU16() // ID
-        let flags = try? readU16() // Flags
+        let id = try? readU16()  // ID
+        let flags = try? readU16()  // Flags
         let qd = try? readU16()
         let an = try? readU16()
-        let ns = try? readU16() // NS
-        let ar = try? readU16() // AR
+        let ns = try? readU16()  // NS
+        let ar = try? readU16()  // AR
 
         guard let id, let flags, let qd, let an, let ns, let ar else {
             return placeholder
         }
 
         // Skip questions
-        for _ in 0 ..< qd {
+        for _ in 0..<qd {
             let name = try? readName(from: buffer, offset: &offset)
             guard let name else {
                 return placeholder
             }
             guard offset + 4 <= buffer.readableBytes else { return placeholder }
-            offset += 4 // QTYPE + QCLASS
+            offset += 4  // QTYPE + QCLASS
         }
 
-        var outputs: [IPv4Address] = [] // ipv4s
+        var outputs: [IPv4Address] = []  // ipv4s
         var outTTL = Int.max
 
-        for _ in 0 ..< an {
+        for _ in 0..<an {
             let name = try? readName(from: buffer, offset: &offset)
             guard let name else {
                 return placeholder
@@ -133,11 +143,11 @@ public enum MinimalDNSParser {
             }
 
             if type == DNSType.a.rawValue, cls == DNSClass.internet.rawValue, rdlength == 4,
-               let b0 = buffer.loadUInt8(at: offset),
-               let b1 = buffer.loadUInt8(at: offset + 1),
-               let b2 = buffer.loadUInt8(at: offset + 2),
-               let b3 = buffer.loadUInt8(at: offset + 3),
-               let ip = FBIPv4(a: b0, b: b1, c: b2, d: b3).asNetworkIPv4Address
+                let b0 = buffer.loadUInt8(at: offset),
+                let b1 = buffer.loadUInt8(at: offset + 1),
+                let b2 = buffer.loadUInt8(at: offset + 2),
+                let b3 = buffer.loadUInt8(at: offset + 3),
+                let ip = FBIPv4(a: b0, b: b1, c: b2, d: b3).asNetworkIPv4Address
             {
                 outputs.append(ip)
                 outTTL = min(outTTL, Int(ttl))
@@ -179,7 +189,9 @@ public enum MinimalDNSParser {
                     throw ParseError.truncated
                 }
 
-                let pointerOffset = Int((UInt16(len & RFC1035.pointerOffsetMask) << 8) | UInt16(second))
+                let pointerOffset = Int(
+                    (UInt16(len & RFC1035.pointerOffsetMask) << 8) | UInt16(second)
+                )
                 // Pointer must be inside message
                 guard pointerOffset < buffer.readableBytes else {
                     throw ParseError.truncated
