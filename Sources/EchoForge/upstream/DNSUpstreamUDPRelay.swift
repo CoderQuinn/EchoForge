@@ -90,9 +90,9 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
             return eventLoop.makeFailedFuture(DNSUpstreamError.invalidPayload)
         }
 
-        return start().flatMap { [weak self] in
+        return start().flatMap { [weak self, eventLoop = self.eventLoop] in
             guard let self = self else {
-                return MultiThreadedEventLoopGroup.currentEventLoop!.makeFailedFuture(DNSUpstreamError.internalError)
+                return eventLoop.makeFailedFuture(DNSUpstreamError.internalError)
             }
             guard let ch = self.channel, let remoteAddress = self.remoteAddress else {
                 return self.eventLoop.makeFailedFuture(DNSUpstreamError.notReady)
