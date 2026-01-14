@@ -67,12 +67,12 @@ public final class DNSService {
         let fast = DNSFastSniffer.sniffQuery(buffer)
         let decision = DNSPolicyEngine.decide(fast)
 
-        return eventLoop.flatSubmit { [weak self] in
+        return eventLoop.flatSubmit { [weak self, eventLoop = self.eventLoop] in
             guard let self else {
                 let data = buffer.materialize()
                 return callerLoop.makeSucceededFuture(data)
             }
-            self.eventLoop.assertInEventLoop()
+            eventLoop.assertInEventLoop()
             return self.handlerInternal(buffer, fast: fast, decision: decision)
         }.hop(to: callerLoop)
     }
@@ -290,19 +290,8 @@ public final class DNSService {
     }
 
     private func prefetchAIfNeeded(domain: String, buffer: FBPacketBuffer) {
-        eventLoop.assertInEventLoop()
-
-        let key = DNSCacheKey(domain: domain, type: .a)
-        if caches.lookup(key)?.realIPs != nil { return }
-
-        // Build a simple A query for domain, using random txid; upstream relay rewrites anyway.
-        let payload = buffer.materialize()
-        upstream.query(payload).whenSuccess { [weak self] resp in
-            guard let self else { return }
-            self.eventLoop.execute {
-                self.onPrefetchAResult(domain: domain, response: resp)
-            }
-        }
+        // Delegate to the main implementation to ensure correct query type
+        prefetchAIfNeeded(domain: domain)
     }
 
     private func onPrefetchAResult(domain: String, response: Data) {
