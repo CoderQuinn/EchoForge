@@ -107,7 +107,7 @@ final class DNSFastSnifferTests: XCTestCase {
     
     func testSniffValidAQuery() {
         let data = buildValidQuery(id: 0x1234, domain: "example.com", qtype: .a)
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         let result = DNSFastSniffer.sniffQuery(buffer)
         
@@ -119,7 +119,7 @@ final class DNSFastSnifferTests: XCTestCase {
     
     func testSniffValidAAAAQuery() {
         let data = buildValidQuery(id: 0x5678, domain: "ipv6.example.com", qtype: .aaaa)
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         let result = DNSFastSniffer.sniffQuery(buffer)
         
@@ -131,7 +131,7 @@ final class DNSFastSnifferTests: XCTestCase {
     
     func testSniffValidPTRQuery() {
         let data = buildValidQuery(id: 0xABCD, domain: "1.0.0.127.in-addr.arpa", qtype: .ptr)
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         let result = DNSFastSniffer.sniffQuery(buffer)
         
@@ -145,7 +145,7 @@ final class DNSFastSnifferTests: XCTestCase {
     
     func testRejectsCompressionPointer() {
         let data = buildQueryWithCompressionPointer()
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         let result = DNSFastSniffer.sniffQuery(buffer)
         
@@ -156,7 +156,7 @@ final class DNSFastSnifferTests: XCTestCase {
     
     func testRejectsMultipleQuestions() {
         let data = buildQueryWithMultipleQuestions()
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         let result = DNSFastSniffer.sniffQuery(buffer)
         
@@ -174,7 +174,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.writeUInt16(0)
         writer.writeUInt16(0)
         
-        let buffer = FBPacketBuffer(writer.data)
+        let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
         
         XCTAssertNil(result, "Should reject queries with zero questions")
@@ -185,7 +185,7 @@ final class DNSFastSnifferTests: XCTestCase {
     func testRejectsTruncatedHeader() {
         // Header should be 12 bytes, provide only 10
         let data = Data(repeating: 0, count: 10)
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         let result = DNSFastSniffer.sniffQuery(buffer)
         
@@ -207,7 +207,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.writeUInt8(7)  // Length byte for "example"
         writer.raw(Data("exa".utf8))  // Only write 3 bytes instead of 7
         
-        let buffer = FBPacketBuffer(writer.data)
+        let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
         
         XCTAssertNil(result, "Should reject queries with truncated question")
@@ -228,7 +228,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.name("example.com")
         // Don't write QTYPE and QCLASS
         
-        let buffer = FBPacketBuffer(writer.data)
+        let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
         
         XCTAssertNil(result, "Should reject queries missing QTYPE/QCLASS")
@@ -238,7 +238,7 @@ final class DNSFastSnifferTests: XCTestCase {
     
     func testMaxLabelLength() {
         let data = buildQueryWithMaxLabelLength()
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         let result = DNSFastSniffer.sniffQuery(buffer)
         
@@ -248,7 +248,7 @@ final class DNSFastSnifferTests: XCTestCase {
     
     func testLongDomainName() {
         let data = buildQueryWithLongDomain()
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         let result = DNSFastSniffer.sniffQuery(buffer)
         
@@ -274,7 +274,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.writeUInt16(DNSType.a.rawValue)
         writer.writeUInt16(DNSClass.internet.rawValue)
         
-        let buffer = FBPacketBuffer(writer.data)
+        let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
         
         // Note: The current implementation doesn't validate label length,
@@ -299,7 +299,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.writeUInt16(DNSType.a.rawValue)
         writer.writeUInt16(DNSClass.internet.rawValue)
         
-        let buffer = FBPacketBuffer(writer.data)
+        let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
         
         XCTAssertNotNil(result, "Should accept empty domain (root domain)")
@@ -323,7 +323,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.writeUInt16(DNSType.a.rawValue)
         writer.writeUInt16(DNSClass.internet.rawValue)
         
-        let buffer = FBPacketBuffer(writer.data)
+        let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
         
         XCTAssertNil(result, "Should reject response packets (QR=1)")
@@ -345,7 +345,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.writeUInt16(999)  // Invalid QTYPE
         writer.writeUInt16(DNSClass.internet.rawValue)
         
-        let buffer = FBPacketBuffer(writer.data)
+        let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
         
         XCTAssertNil(result, "Should reject queries with invalid QTYPE")
@@ -365,7 +365,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.writeUInt16(DNSType.a.rawValue)
         writer.writeUInt16(3)  // Class CHAOS (not internet)
         
-        let buffer = FBPacketBuffer(writer.data)
+        let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
         
         XCTAssertNil(result, "Should reject queries with non-Internet class")
@@ -375,7 +375,7 @@ final class DNSFastSnifferTests: XCTestCase {
     
     func testQuestionBufferContainsValidData() {
         let data = buildValidQuery(domain: "test.example.com", qtype: .a)
-        let buffer = FBPacketBuffer(data)
+        let buffer = FBDataPacketBuffer(data)
         
         guard let result = DNSFastSniffer.sniffQuery(buffer) else {
             XCTFail("Failed to sniff valid query")

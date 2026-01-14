@@ -85,7 +85,9 @@ final class DNSServiceTests: XCTestCase {
             case .success(let responseData):
                 XCTAssertNotNil(responseData)
                 // Both responses should return the same fake IP
-                XCTAssertEqual(responseData?.count, firstResponseData?.count)
+                var count1 = responseData?.count ?? 0
+                var count2 = firstResponseData?.count ?? 1
+                XCTAssertEqual(count1, count2)
                 exp2.fulfill()
             case .failure(let error):
                 XCTFail("Second query failed: \(error)")
