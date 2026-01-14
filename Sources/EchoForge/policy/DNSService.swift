@@ -184,7 +184,7 @@ public final class DNSService {
 
         let payload = buffer.materialize()
 
-        return upstream.query(payload)
+        return upstream.query(payload, timeout: .seconds(3))
             .map { Optional($0) }
             .recover { error in
                 switch error {
