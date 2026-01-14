@@ -1,9 +1,10 @@
 import DNSClient
-@testable import EchoForgeDNS
 import Foundation
-import Network
 import NIO
+import Network
 import Testing
+
+@testable import EchoForgeDNS
 
 @Suite("Stress")
 struct StressTests {
@@ -17,7 +18,7 @@ struct StressTests {
         let total = 500
         var seen = Set<UInt32>()
 
-        for i in 0 ..< total {
+        for i in 0..<total {
             let domain = "seq\(i).local"
             let msg = try makeQueryMessage(domain: domain)
             let resp = try await router.handleInboundFuture(msg, on: eventLoop).get()
@@ -63,14 +64,15 @@ struct StressTests {
         let results = Results()
 
         await withTaskGroup(of: Void.self) { group in
-            for t in 0 ..< concurrency {
+            for t in 0..<concurrency {
                 group.addTask {
-                    for i in 0 ..< perWorker {
+                    for i in 0..<perWorker {
                         let idx = t * perWorker + i
                         let domain = "concurrent\(idx).local"
                         do {
                             let msg = try makeQueryMessage(domain: domain)
-                            let resp = try await router.handleInboundFuture(msg, on: eventLoop).get()
+                            let resp = try await router.handleInboundFuture(msg, on: eventLoop)
+                                .get()
                             if resp.answers.count != 1 {
                                 await results.addError("Expected one A answer for \(domain)")
                                 continue
