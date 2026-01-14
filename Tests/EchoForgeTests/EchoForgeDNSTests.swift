@@ -47,7 +47,7 @@ final class FakeIPPoolTests: XCTestCase {
 
         loop.execute {
             var allocated: [IPv4Address] = []
-            for i in 0..<5{
+            for i in 0..<5 {
                 let ip = pool.assign(domain: "d\(i).com")
                 XCTAssertNotNil(ip)
                 allocated.append(ip!)

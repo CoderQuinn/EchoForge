@@ -1,6 +1,7 @@
 import DNSClient
-@testable import EchoForgeDNS
 import Testing
+
+@testable import EchoForgeDNS
 
 @Suite("FakeIPPool")
 struct FakeIPPoolTests {

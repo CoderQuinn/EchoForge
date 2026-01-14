@@ -20,7 +20,7 @@ public enum EFLog {
     private static func log(_ category: String) -> FLLog {
         FLLog(category: category)
     }
-    
+
     #if FORGELOG_DISABLED
         // cache
         public static func cache(_ m: String) {

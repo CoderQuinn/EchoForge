@@ -1,16 +1,23 @@
 import DNSClient
-@testable import EchoForgeDNS
 import NIO
 import Testing
+
+@testable import EchoForgeDNS
 
 @Suite("DNSRouter")
 struct DNSRouterTests {
     final class MockDNSResolver: DNSResolverProtocol {
         var responses: [String: UInt32] = [:]
 
-        func resolveMessage(forHost host: String, type _: DNSResourceType, on eventLoop: EventLoop) -> EventLoopFuture<Message> {
+        func resolveMessage(forHost host: String, type _: DNSResourceType, on eventLoop: EventLoop)
+            -> EventLoopFuture<Message>
+        {
             do {
-                let msg = try makeResponseMessage(domain: host, ip: responses[host], id: UInt16.random(in: 0 ... UInt16.max))
+                let msg = try makeResponseMessage(
+                    domain: host,
+                    ip: responses[host],
+                    id: UInt16.random(in: 0...UInt16.max)
+                )
                 return eventLoop.makeSucceededFuture(msg)
             } catch {
                 return eventLoop.makeFailedFuture(error)

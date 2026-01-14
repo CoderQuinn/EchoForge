@@ -1,19 +1,26 @@
 import DNSClient
-@testable import EchoForgeDNS
-import Network
 import NIO
+import Network
 import Testing
+
+@testable import EchoForgeDNS
 
 @Suite("EchoForgeDNS")
 struct EchoForgeDNSSuite {
     /// Mock upstream resolver
     final class MockDNSResolver: DNSResolverProtocol {
-        var responses: [String: UInt32] = [:] // stores host -> IPv4 host byte order
-        func resolveMessage(forHost host: String, type _: DNSResourceType, on eventLoop: EventLoop) -> EventLoopFuture<Message> {
+        var responses: [String: UInt32] = [:]  // stores host -> IPv4 host byte order
+        func resolveMessage(forHost host: String, type _: DNSResourceType, on eventLoop: EventLoop)
+            -> EventLoopFuture<Message>
+        {
             // Build a raw DNS response packet and parse it using DNSDecoder
             do {
                 let ip = responses[host]
-                let message = try makeResponseMessage(domain: host, ip: ip, id: UInt16.random(in: 0 ... UInt16.max))
+                let message = try makeResponseMessage(
+                    domain: host,
+                    ip: ip,
+                    id: UInt16.random(in: 0...UInt16.max)
+                )
                 return eventLoop.makeSucceededFuture(message)
             } catch {
                 return eventLoop.makeFailedFuture(error)
@@ -106,23 +113,21 @@ struct EchoForgeDNSSuite {
         let resp1 = try await router.handleInboundFuture(msg1, on: eventLoop).get()
         #expect(resp1.answers.count == 1)
         var ip1: UInt32 = 0
-        if case let .a(record)? = resp1.answers.first {
-            ip1 = record.resource.address
-        } else {
+        guard case let .a(record)? = resp1.answers.first else {
             Issue.record("Expected A record for host1.local")
             return
         }
+        ip1 = record.resource.address
 
         let msg2 = try makeQueryMessage(domain: "host2.local")
         let resp2 = try await router.handleInboundFuture(msg2, on: eventLoop).get()
         #expect(resp2.answers.count == 1)
         var ip2: UInt32 = 0
-        if case let .a(record)? = resp2.answers.first {
-            ip2 = record.resource.address
-        } else {
+        guard case let .a(record)? = resp2.answers.first else {
             Issue.record("Expected A record for host2.local")
             return
         }
+        ip2 = record.resource.address
 
         #expect(ip1 != ip2, "Two different hosts should receive different fake IPs")
         try? await eventLoopGroup.shutdownGracefully()
@@ -144,7 +149,7 @@ struct EchoForgeDNSSuite {
         let newIP = await ipPool.assign(domain: "clear.com")
         // old mapping should be cleared
         if let oldIP = oldIP {
-            #expect(await router.reverseLookupFakeIP(for: oldIP) == nil) // previous mapping has been cleared
+            #expect(await router.reverseLookupFakeIP(for: oldIP) == nil)  // previous mapping has been cleared
         }
         // new mapping exists for the new IP
         #expect(newIP != nil)
