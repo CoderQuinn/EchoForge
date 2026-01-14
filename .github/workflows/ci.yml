@@ -30,12 +30,6 @@ jobs:
           brew update
           brew install swift-format || true
 
-      - name: Build
-        run: swift build -v
-
-      - name: Test
-        run: swift test --parallel -v
-
       - name: Swift Format Auto-Fix
         run: |
           if command -v swift-format >/dev/null 2>&1; then
@@ -58,3 +52,9 @@ jobs:
           git add -A
           git commit -m "chore(format): auto-format via CI"
           git push
+
+      - name: Build
+        run: swift build -v
+
+      - name: Test
+        run: swift test --parallel -v
