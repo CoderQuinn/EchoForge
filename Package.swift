@@ -32,7 +32,7 @@ let package = Package(
                 .product(name: "NIOTransportServices", package: "swift-nio-transport-services"),
             ],
             swiftSettings: [
-                .define("FORGELOG_DISABLED", .when(configuration: .debug))
+                .define("FORGELOG_DISABLED", .when(configuration: .release))
             ]
         ),
         .testTarget(

@@ -16,20 +16,38 @@ import ForgeLogKit
  */
 
 public enum EFLog {
-    #if !FORGELOG_DISABLED
-
-        @inline(__always) public static func info(_: String) {}
-        @inline(__always) public static func debug(_: String) {}
-        @inline(__always) public static func warn(_: String) {}
-        @inline(__always) public static func error(_: String) {}
-
-    #else
-
-        @inline(__always)
-        private static func log(_ category: String) -> FLLog {
-            FLLog(category: category)
+    @inline(__always)
+    private static func log(_ category: String) -> FLLog {
+        FLLog(category: category)
+    }
+    
+    #if FORGELOG_DISABLED
+        // cache
+        public static func cache(_ m: String) {
         }
 
+        // fake-ip
+        public static func fakeip(_ m: String) {
+        }
+
+        // upstream
+        public static func upstream(_ m: String) {
+        }
+
+        // core policy
+        public static func core(_ m: String) {
+        }
+
+        public static func debug(_ m: String) {
+        }
+
+        public static func warn(_ m: String) {
+        }
+
+        public static func error(_ m: String) {
+        }
+
+    #else
         // cache
         public static func cache(_ m: String) {
             log("echodns.cache").debug(m)
