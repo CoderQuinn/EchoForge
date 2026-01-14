@@ -32,7 +32,7 @@ jobs:
       - name: Swift Format Auto-Fix
         run: |
           if command -v swift-format >/dev/null 2>&1; then
-            swift-format --mode format --configuration .swift-format --recursive --in-place .
+            swift-format format --configuration .swift-format --recursive --in-place .
           else
             echo "swift-format not installed; skipping lint"
           fi
