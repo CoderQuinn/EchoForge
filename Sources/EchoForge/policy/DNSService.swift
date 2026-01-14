@@ -174,7 +174,7 @@ public final class DNSService {
         return handleUpstream(buffer: buffer, fast: fast)
     }
 
-    // MARK: - PTR handler
+    // MARK: - Upstream forwarding
 
     private func handleUpstream(
         buffer: FBPacketBuffer,
