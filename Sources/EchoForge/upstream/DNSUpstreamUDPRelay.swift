@@ -145,6 +145,14 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
 
         guard channel != nil else { return }
 
+        // Security: Validate that the datagram is from the configured upstream server
+        // to prevent DNS spoofing attacks from unauthorized sources
+        guard let expectedRemote = remoteAddress,
+              envelope.remoteAddress == expectedRemote
+        else {
+            return
+        }
+
         var buf = envelope.data
         guard let bytes = buf.readBytes(length: buf.readableBytes),
               bytes.count >= 2
