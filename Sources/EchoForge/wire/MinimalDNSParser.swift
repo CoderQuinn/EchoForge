@@ -14,6 +14,7 @@ public enum ParseError: Error {
     case notQuery
     case noQuestions
     case pointerLoop
+    case bufferTypeMismatch
 }
 
 private enum RFC1035 {
@@ -220,7 +221,7 @@ public enum MinimalDNSParser {
             }
 
             guard let payload = slice as? FBPacketBuffer else {
-                throw ParseError.truncated
+                throw ParseError.bufferTypeMismatch
             }
 
             guard let label = String(data: payload.materialize(), encoding: .utf8) else {
