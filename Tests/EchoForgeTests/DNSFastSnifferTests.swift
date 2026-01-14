@@ -276,11 +276,9 @@ final class DNSFastSnifferTests: XCTestCase {
         
         let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
-        
-        // Note: The current implementation doesn't validate label length,
-        // it only rejects compression pointers. This test documents current behavior.
-        // If label length validation is added in the future, this test should be updated.
-        XCTAssertNotNil(result, "Current implementation accepts labels up to 255 bytes")
+
+        // Labels longer than 63 bytes are invalid per RFC 1035 and should be rejected.
+        XCTAssertNil(result, "Should reject labels exceeding 63 bytes")
     }
     
     func testEmptyDomain() {

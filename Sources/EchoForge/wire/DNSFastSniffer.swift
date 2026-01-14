@@ -23,23 +23,33 @@ public enum DNSFastSniffer {
     private static func skipQNameNoPointer(buffer: FBPacketBuffer, offset: inout Int) -> Bool {
         // [length][label bytes][length][label bytes]...[0]
         var len = 0
+        var totalConsumed = 0 // includes length octets and label bytes
         repeat {
             guard let len8 = buffer.loadUInt8(at: offset) else { return false }
             len = Int(len8)
             offset += 1
+            totalConsumed += 1
 
             // reject compression pointer or any non-standard label encoding
-            if (len & 0xC0) != 0 {
+            if (len8 & RFC1035.pointerMask) == RFC1035.pointerValue {
                 return false
             }
+
+            // per RFC 1035: label length must be <= maxLabelLength
+            if len > RFC1035.maxLabelLength { return false }
 
             // skip label bytes(if any)
             if len > 0 {
                 guard offset + len <= buffer.readableBytes else { return false }
                 offset += len
+                totalConsumed += len
+                // per RFC 1035: full domain name (including length octets and the root label) must be <= maxNameLength
+                if totalConsumed > RFC1035.maxNameLength { return false }
             }
         } while len != 0
 
+        // ensure final total does not exceed maxNameLength (covers the terminating zero label as well)
+        if totalConsumed > RFC1035.maxNameLength { return false }
         return true
     }
 
