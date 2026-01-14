@@ -83,12 +83,15 @@ public enum DNSFastSniffer {
         guard let questionSlice = buffer.slice(from: qnameStart, length: questionLength) else {
             return nil
         }
+        guard let questionBuffer = questionSlice as? FBPacketBuffer else {
+            return nil
+        }
         return SniffedDNSQuery(
             id: id,
             flags: flags,
             qtype: qtype,
             qclass: qclass,
-            question: questionSlice as! FBPacketBuffer
+            question: questionBuffer
         )
     }
 }
