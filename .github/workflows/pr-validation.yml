@@ -33,6 +33,9 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Swift format check
+        run: swift-format lint --recursive Sources Tests
+
       - name: Build Swift Package
         run: swift build -v
 

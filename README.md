@@ -1,39 +1,42 @@
 
-# EchoForgeDNS
+# EchoForge
 
 ![Swift](https://img.shields.io/badge/Swift-6.1-orange?logo=swift)
 ![Platform](https://img.shields.io/badge/Platform-iOS%2013%2B%20%7C%20macOS%2011%2B-blue)
 
-**EchoForgeDNS** is a lightweight, embeddable DNS component written in Swift.
-It is designed for use in larger networking tools, such as intercepting and rewriting A-records for selected domains while leaving other DNS traffic to normal resolvers.
+**EchoForge** is a lightweight, embeddable DNS component written in Swift.
+It provides a fast path DNS classifier, a minimal RFC1035 parser, a fake IPv4 pool, caching, and an upstream UDP relay to integrate DNS interception into larger networking tools.
 
 
 ## Features
 
-- **UDP DNS** handling (port 53)
-- **Fake-IP pool** using the RFC 6890 reserved range `198.18.0.0/16`
-- **Pluggable upstream resolver** (`DNSResolverProtocol`) for easy testing and adaptation
-- **SwiftNIO** for non-blocking performance
+- **Fast Path Sniffer**: quickly classifies common queries (A/AAAA/PTR) without allocations.
+- **Minimal RFC1035 Parser**: slow path ensures correctness and pointer handling.
+- **Fake IPv4 Pool**: RFC 6890 `198.18.0.0/16` with reverse mapping.
+- **TTL-Aware Cache**: in-memory cache for A responses with sweeping.
+- **UDP Upstream Relay**: SwiftNIO-based UDP/53 relay with txid rewrite/restore.
+- **SwiftNIO** for non-blocking performance.
+- **Policy Engine**: routes queries to local handling, upstream passthrough, or refusal.
 
 
 ## Installation
 
-Add **EchoForgeDNS** to your `Package.swift` dependencies:
+Add the package to your `Package.swift` dependencies:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/CoderQuinn/EchoForgeDNS.git", from: "0.2.0")
+    .package(url: "https://github.com/CoderQuinn/EchoForge.git", from: "0.3.0")
 ]
 ```
 
-Then add `EchoForgeDNS` to your target dependencies:
+Then add the `EchoForge` library product to your target dependencies:
 
 ```swift
 targets: [
     .target(
         name: "YourTarget",
         dependencies: [
-            .product(name: "EchoForgeDNS", package: "EchoForgeDNS")
+            .product(name: "EchoForge", package: "EchoForge")
         ]
     ),
 ]
@@ -43,17 +46,35 @@ targets: [
 ## Usage Example
 
 ```swift
-import EchoForgeDNS
+import EchoForge
+import NIO
+import ForgeBase
 
-// Example: Initialize DNS service (see documentation for details)
-let dnsService = DNSService(/* configuration */)
-dnsService.start()
+// Create an EventLoop (example only; integrate with your app's loop)
+let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+let loop = group.next()
+
+// Initialize DNS service (defaults: ttl=300, upstream=8.8.8.8:53)
+let service = DNSService(eventLoop: loop)
+service.startSweep() // optional: enable periodic cache sweep
+
+// Handle an incoming DNS UDP payload (Data) on any loop
+// FBDataPacketBuffer is provided by ForgeBase
+let incoming: Data = /* UDP payload */ Data()
+let buf = FBDataPacketBuffer(incoming)
+
+// Dispatch to service; result hops back to caller's loop
+let future = service.handleDNSPayload(buf, loop)
+future.whenSuccess { response in
+    // response is Data? to send back to client
+}
 ```
 
 ## Design Notes
 
-- Tests avoid constructing internal types from the `DNSClient` dependency; instead, they build raw DNS packets and parse them with `DNSDecoder` to produce `Message` instances. This keeps tests resilient to access-control changes in the dependency.
-- The Fake-IP pool intentionally uses `198.18.0.0/16` (RFC 6890 reserved block) to avoid colliding with public IPv4 space.
+- Two-stage pipeline: fast sniff (optimistic) then minimal parser (correctness).
+- Fake-IP pool uses `198.18.0.0/16` (RFC 6890 reserved block) to avoid collisions.
+- Policy engine keeps the fast path lightweight and defers correctness to the parser.
 
 
 ## Roadmap / TODO
@@ -71,7 +92,7 @@ Patches, tests, and documentation improvements are welcome! Please open a PR aga
 ## Credits
 
 - SwiftNIO: https://github.com/apple/swift-nio
-- DNSClient: https://github.com/orlandos-nl/DNSClient
+- ForgeBase / ForgeLogKit: https://github.com/CoderQuinn
 
 ## License
 Apache 2.0 License.

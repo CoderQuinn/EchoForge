@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "lineLength": 100,
+  "indentation": {
+    "spaces": 4
+  },
+  "tabWidth": 4,
+
+  "maximumBlankLines": 1,
+
+  "respectsExistingLineBreaks": true,
+
+  "lineBreakBeforeEachArgument": true,
+  "lineBreakBeforeEachGenericRequirement": true,
+
+  "rules": {
+    "DoNotUseSemicolons": true,
+    "OrderedImports": true,
+    "UseEarlyExits": true,
+
+    "NoBlockComments": true,
+    "NoEmptyTrailingClosureParentheses": true,
+    "NoAccessLevelOnExtensionDeclaration": true,
+
+    "OneVariableDeclarationPerLine": true,
+    "GroupNumericLiterals": true,
+
+    "AlwaysUseLowerCamelCase": true,
+
+    "NeverForceUnwrap": false,
+    "AllPublicDeclarationsHaveDocumentation": false,
+    "BeginDocumentationCommentWithOneLineSummary": false
+  }
+}
