@@ -17,7 +17,7 @@ public enum ParseError: Error {
     case bufferTypeMismatch
 }
 
-private enum RFC1035 {
+public enum RFC1035 {
     static let maxLabelLength = 63
     static let maxNameLength = 255
 

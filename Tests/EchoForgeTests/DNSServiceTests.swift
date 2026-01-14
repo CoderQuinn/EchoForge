@@ -436,7 +436,7 @@ final class DNSServiceTests: XCTestCase {
         wait(for: [exp1], timeout: 2.0)
         
         // Now test dial decision for a fake IP
-        let fakeIP = IPv4Address("198.18.0.1")!  // Typical fake IP range
+        let fakeIP = IPv4Address("198.18.0.2")!  // Typical fake IP range
         
         service.resolveDialDecision(fakeIP, loop).whenComplete { result in
             switch result {

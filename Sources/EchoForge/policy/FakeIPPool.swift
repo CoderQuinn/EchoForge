@@ -82,6 +82,10 @@ public final class FakeIPPool {
         }
 
         guard capacity > 0 else { return nil }
+        guard ipToDomain.count <= capacity else {
+            // Pool exhausted
+            return nil
+        }
 
         for _ in 0..<capacity {
             let host = offset

@@ -42,12 +42,12 @@ final class FakeIPPoolTests: XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { try? group.syncShutdownGracefully() }
         let loop = group.next()
-        let pool = FakeIPPool(cidr: "198.18.0.0/29", on: loop)  // 4 usable hosts
+        let pool = FakeIPPool(cidr: "198.18.0.0/29", on: loop)  // 5 usable hosts
         let exp = expectation(description: "exhaustion")
 
         loop.execute {
             var allocated: [IPv4Address] = []
-            for i in 0..<4 {
+            for i in 0..<5{
                 let ip = pool.assign(domain: "d\(i).com")
                 XCTAssertNotNil(ip)
                 allocated.append(ip!)
