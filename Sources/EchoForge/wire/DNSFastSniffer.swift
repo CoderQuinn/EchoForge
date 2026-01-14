@@ -83,6 +83,7 @@ public enum DNSFastSniffer {
         guard let questionSlice = buffer.slice(from: qnameStart, length: questionLength) else {
             return nil
         }
+        // Ensure slice is the expected FBPacketBuffer concrete type
         guard let questionBuffer = questionSlice as? FBPacketBuffer else {
             return nil
         }
