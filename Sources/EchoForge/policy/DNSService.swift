@@ -67,12 +67,12 @@ public final class DNSService {
         let fast = DNSFastSniffer.sniffQuery(buffer)
         let decision = DNSPolicyEngine.decide(fast)
 
-        return eventLoop.flatSubmit { [weak self] in
+        return eventLoop.flatSubmit { [weak self, eventLoop = self.eventLoop] in
             guard let self else {
                 let data = buffer.materialize()
                 return callerLoop.makeSucceededFuture(data)
             }
-            self.eventLoop.assertInEventLoop()
+            eventLoop.assertInEventLoop()
             return self.handlerInternal(buffer, fast: fast, decision: decision)
         }.hop(to: callerLoop)
     }
