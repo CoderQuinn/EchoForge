@@ -1,7 +1,7 @@
 //
 //
 //  EFLog.swift
-//  EchoForgeDNS
+//  EchoForge
 //
 //  Created by MagicianQuinn on 2025/12/31.
 //

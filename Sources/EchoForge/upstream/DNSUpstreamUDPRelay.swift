@@ -1,4 +1,4 @@
-//  EchoForgeDNS
+//  EchoForge
 //
 //  Created by MagicianQuinn on 2026/1/3.
 //
