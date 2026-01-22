@@ -75,8 +75,8 @@ public enum MinimalDNSParser {
         )
     }
 
-    public static func extractAnswers(from buffer: FBPacketBuffer) -> ([IPv4Address], Int) {
-        let placeholder: ([IPv4Address], Int) = ([], 0)  // IP and ttl
+    public static func extractAnswers(from buffer: FBPacketBuffer) -> ([IPv4Address], [Int]) {
+        let placeholder: ([IPv4Address], [Int]) = ([], [])  // IP and ttl
         guard buffer.readableBytes >= 12 else {
             return placeholder
         }
@@ -110,6 +110,9 @@ public enum MinimalDNSParser {
             return placeholder
         }
 
+        guard (flags & 0x8000) != 0 else { return placeholder }  // QR
+        guard (flags & 0x000F) == 0 else { return placeholder }  // RCODE
+
         // Skip questions
         for _ in 0..<qd {
             let name = try? readName(from: buffer, offset: &offset)
@@ -121,7 +124,7 @@ public enum MinimalDNSParser {
         }
 
         var outputs: [IPv4Address] = []  // ipv4s
-        var outTTL = Int.max
+        var outTTL: [Int] = []  // ttls
 
         for _ in 0..<an {
             let name = try? readName(from: buffer, offset: &offset)
@@ -150,7 +153,7 @@ public enum MinimalDNSParser {
                 let ip = FBIPv4(a: b0, b: b1, c: b2, d: b3).asNetworkIPv4Address
             {
                 outputs.append(ip)
-                outTTL = min(outTTL, Int(ttl))
+                outTTL.append(Int(ttl))
             }
 
             offset += Int(rdlength)

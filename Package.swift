@@ -37,8 +37,12 @@ let package = Package(
         ),
         .testTarget(
             name: "EchoForgeTests",
-            dependencies: ["EchoForge"],
-            path: "Tests/EchoForgeTests"
+            dependencies: [
+                "EchoForge",
+                .product(name: "ForgeBase", package: "ForgeBase"),
+                .product(name: "NIO", package: "swift-nio"),
+            ],
+            path: "Tests/EchoForgeTests",
         ),
     ]
 )

@@ -12,7 +12,6 @@ import XCTest
 @testable import EchoForge
 
 final class DNSFastSnifferTests: XCTestCase {
-
     // MARK: - Helper Methods
 
     /// Build a valid DNS query packet

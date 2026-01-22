@@ -19,7 +19,7 @@ import Network
 /// - All UInt32 values are NETWORK BYTE ORDER (big-endian)
 /// - Only IPs actually allocated by this pool are considered "fake"
 /// - Must be accessed from the bound EventLoop
-public final class FakeIPPool {
+public final class FakeIPPool: @unchecked Sendable {
     private let eventLoop: EventLoop
 
     /// Network base address (UInt32BE)
@@ -60,9 +60,9 @@ public final class FakeIPPool {
         let hostBits = UInt32(32 - prefixLength)
         hostMask = (hostBits == 32) ? UInt32.max : ((1 << hostBits) - 1)
 
-        // Exclude network (0) and broadcast (hostMask)
+        // Exclude network (0), .0.1, broadcast (hostMask)
         let usableHosts =
-            hostMask > 3 ? hostMask - 3 : 0
+            hostMask > 2 ? hostMask - 2 : 0
 
         capacity = usableHosts
     }
@@ -125,6 +125,8 @@ public final class FakeIPPool {
     /// Reverse lookup fake IP → domain.
     /// Must be called on pool eventLoop.
     public func reverseLookup(_ ip: IPv4Address) -> String? {
+        eventLoop.assertInEventLoop()
+
         let d = ipToDomain[ip]
         if d == nil {
             EFLog.fakeip("reverse miss ip=\(ip)")
@@ -136,6 +138,7 @@ public final class FakeIPPool {
     /// CIDR containment alone is NOT sufficient.
     public func isFakeIP(_ ip: IPv4Address) -> Bool {
         eventLoop.assertInEventLoop()
+
         return ipToDomain[ip] != nil
     }
 

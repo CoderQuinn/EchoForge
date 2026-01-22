@@ -49,7 +49,9 @@ public enum DNSFastSniffer {
         } while len != 0
 
         // ensure final total does not exceed maxNameLength (covers the terminating zero label as well)
-        if totalConsumed > RFC1035.maxNameLength { return false }
+        if totalConsumed > RFC1035.maxNameLength {
+            return false
+        }
         return true
     }
 

@@ -1,8 +1,17 @@
 
 # EchoForge
 
+
+[![CI](https://github.com/CoderQuinn/TunForge/actions/workflows/ci.yml/badge.svg)](
+https://github.com/CoderQuinn/TunForge/actions/workflows/ci.yml
+)
+![Status](https://img.shields.io/badge/status-core_stable_(pre--1.0)-blue)
+![Coverage](https://img.shields.io/badge/Coverage-80%25-brightgreen)
 ![Swift](https://img.shields.io/badge/Swift-6.1-orange?logo=swift)
 ![Platform](https://img.shields.io/badge/Platform-iOS%2013%2B%20%7C%20macOS%2011%2B-blue)
+![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen)
+![License](https://img.shields.io/github/license/CoderQuinn/TunForge)
+
 
 **EchoForge** is a lightweight, embeddable DNS component written in Swift.
 It provides a fast path DNS classifier, a minimal RFC1035 parser, a fake IPv4 pool, caching, and an upstream UDP relay to integrate DNS interception into larger networking tools.
@@ -25,7 +34,7 @@ Add the package to your `Package.swift` dependencies:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/CoderQuinn/EchoForge.git", from: "0.3.0")
+    .package(url: "https://github.com/CoderQuinn/EchoForge.git", from: "0.4.0")
 ]
 ```
 
@@ -69,6 +78,11 @@ future.whenSuccess { response in
     // response is Data? to send back to client
 }
 ```
+
+## Testing
+
+The test suite lives under `Tests/EchoForgeTests` and can be run with SwiftPM (e.g. run `swift test` from the package root).
+Current unit test coverage: **80%**.
 
 ## Design Notes
 

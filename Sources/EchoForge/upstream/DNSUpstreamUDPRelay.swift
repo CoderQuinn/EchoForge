@@ -30,7 +30,7 @@ private struct PendingQuery {
 }
 
 /// UDP/53 DNS upstream relay with TXID rewrite.
-public final class DNSUpstreamUDPRelay: DNSUpstream {
+public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
     private let eventLoop: EventLoop
     private let upstream: Upstream
     private var channel: Channel?
@@ -38,6 +38,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
 
     private var nextID: UInt16 = 1
     private var pendingMap: [UInt16: PendingQuery] = [:]
+    private let maxPending: Int = 4096
 
     public init(eventLoop: EventLoop, upstream: Upstream) {
         self.eventLoop = eventLoop
@@ -94,6 +95,10 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
 
         guard originalPayload.count >= 12 else {
             return eventLoop.makeFailedFuture(DNSUpstreamError.invalidPayload)
+        }
+
+        if pendingMap.count >= maxPending {
+            return eventLoop.makeFailedFuture(DNSUpstreamError.notReady)
         }
 
         return start().flatMap { [weak self, eventLoop = self.eventLoop] in

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-01-22
+### Added
+- Prefetch in-flight tracking and cooldown protection.
+- Per-domain prefetch cooldown deadlines.
+- Upstream breaker protection via `DNSUpstreamBreaker`.
+- Pending request upper bound to prevent unbounded growth.
+### Changed
+- Fixed SwiftPM test target path and dependencies so tests resolve correctly.
+- README updated with testing guidance and current version.
+
 ## [0.3.1] - 2026-01-14
 ### Changed
 - Translated remaining inline comments to English.
