@@ -23,7 +23,7 @@ public enum DNSFastSniffer {
     private static func skipQNameNoPointer(buffer: FBPacketBuffer, offset: inout Int) -> Bool {
         // [length][label bytes][length][label bytes]...[0]
         var len = 0
-        var totalConsumed = 0 // includes length octets and label bytes
+        var totalConsumed = 0  // includes length octets and label bytes
         repeat {
             guard let len8 = buffer.loadUInt8(at: offset) else { return false }
             len = Int(len8)
@@ -59,8 +59,8 @@ public enum DNSFastSniffer {
         guard buffer.readableBytes >= 12 else { return nil }
 
         guard let id = buffer.loadUInt16(at: 0),
-              let flags = buffer.loadUInt16(at: 2),
-              let qdcount = buffer.loadUInt16(at: 4)
+            let flags = buffer.loadUInt16(at: 2),
+            let qdcount = buffer.loadUInt16(at: 4)
         else {
             return nil
         }
@@ -78,7 +78,7 @@ public enum DNSFastSniffer {
         guard qnameEnd + 4 <= buffer.readableBytes else { return nil }
 
         guard let qtypeRaw = buffer.loadUInt16(at: qnameEnd),
-              let qclassRaw = buffer.loadUInt16(at: qnameEnd + 2)
+            let qclassRaw = buffer.loadUInt16(at: qnameEnd + 2)
         else { return nil }
 
         guard let qtype = DNSType(rawValue: qtypeRaw) else {
@@ -86,7 +86,7 @@ public enum DNSFastSniffer {
         }
 
         guard let qclass = DNSClass(rawValue: qclassRaw),
-              qclass == .internet
+            qclass == .internet
         else {
             return nil
         }
