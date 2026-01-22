@@ -24,8 +24,8 @@
 
 import ForgeBase
 import Foundation
-import Network
 import NIO
+import Network
 
 public struct DialDecision {
     public let dialIP: IPv4Address?
@@ -207,7 +207,7 @@ public final class DNSService {
         eventLoop.assertInEventLoop()
 
         if let v4 = parseInAddrArpa(query.question.name), ipPool.isFakeIP(v4),
-           let domain = ipPool.reverseLookup(v4)
+            let domain = ipPool.reverseLookup(v4)
         {
             let resp = DNSMessageBuilder.builePTRResponse(
                 query: query,
@@ -236,16 +236,12 @@ public final class DNSService {
 
         return upstream.query(payload, timeout: .seconds(3))
             .map { [weak self] responseData -> Data? in
-                self?.eventLoop.execute {
-                    self?.breaker.onSuccess()
-                }
+                self?.breaker.onSuccess()
 
                 return responseData
             }
             .recover { [weak self] error in
-                self?.eventLoop.execute {
-                    self?.breaker.onFailure()
-                }
+                self?.breaker.onFailure()
 
                 switch error {
                 case DNSUpstreamError.timeout:
@@ -357,7 +353,8 @@ public final class DNSService {
             guard let self else { return }
             self.eventLoop.assertInEventLoop()
 
-            let interval = Int64(5)
+            let intervalSeconds = max(10, ttl / 2)
+            let interval = Int64(intervalSeconds)
             self.sweepTask = self.eventLoop.scheduleRepeatedTask(
                 initialDelay: .seconds(interval),
                 delay: .seconds(interval)
@@ -398,7 +395,7 @@ public final class DNSService {
 
         return
             FBIPv4Parse
-                .parseDottedDecimal(Substring(reversed))?
-                .asNetworkIPv4Address
+            .parseDottedDecimal(Substring(reversed))?
+            .asNetworkIPv4Address
     }
 }

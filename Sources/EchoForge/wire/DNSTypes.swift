@@ -69,10 +69,10 @@ public struct DNSQuestion {
     public let qclass: DNSClass
 }
 
-public extension DNSQuestion {
+extension DNSQuestion {
     /// Serialize question to DNS wire format:
     /// [QNAME][QTYPE][QCLASS]
-    func toData() -> Data {
+    public func toData() -> Data {
         var writer = FBPacketBufferWriter()
         writer.name(name)
         writer.writeUInt16(type.rawValue)

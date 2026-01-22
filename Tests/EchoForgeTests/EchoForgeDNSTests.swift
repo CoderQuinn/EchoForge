@@ -1,6 +1,6 @@
 import Foundation
-import Network
 import NIO
+import Network
 import XCTest
 
 @testable import EchoForge
@@ -42,12 +42,12 @@ final class FakeIPPoolTests: XCTestCase {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { try? group.syncShutdownGracefully() }
         let loop = group.next()
-        let pool = FakeIPPool(cidr: "198.18.0.0/29", on: loop) // 5 usable hosts
+        let pool = FakeIPPool(cidr: "198.18.0.0/29", on: loop)  // 5 usable hosts
         let exp = expectation(description: "exhaustion")
 
         loop.execute {
             var allocated: [IPv4Address] = []
-            for i in 0 ..< 5 {
+            for i in 0..<5 {
                 let ip = pool.assign(domain: "d\(i).com")
                 XCTAssertNotNil(ip)
                 allocated.append(ip!)
@@ -138,7 +138,7 @@ final class DNSCacheTests: XCTestCase {
         loop.execute {
             cache.insert(entry)
             XCTAssertNil(cache.lookup(key))
-            XCTAssertNil(cache.lookup(key)) // second lookup should also miss
+            XCTAssertNil(cache.lookup(key))  // second lookup should also miss
             exp.fulfill()
         }
 
@@ -199,6 +199,55 @@ final class DNSUpstreamUDPRelayTests: XCTestCase {
                     exp.fulfill()
                 case .success:
                     XCTFail("Expected timeout, got success")
+                }
+            }
+        }
+
+        wait(for: [exp], timeout: 1.0)
+    }
+
+    func testMaxPendingLimitRejectsNewQueries() {
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        defer { try? group.syncShutdownGracefully() }
+        let loop = group.next()
+        let relay = DNSUpstreamUDPRelay(
+            eventLoop: loop,
+            upstream: Upstream(host: "127.0.0.1", port: 9)
+        )
+        let exp = expectation(description: "max pending limit")
+
+        loop.execute {
+            // Start the relay to ensure channel is ready
+            relay.start().whenComplete { _ in
+                // Fill up the pending map with 4096 queries (maxPending limit)
+                // Note: 4096 matches the private maxPending constant in DNSUpstreamUDPRelay
+                // We use a long timeout to keep queries pending while we test the limit
+                var payload = Data(repeating: 0, count: 12)
+                for i in 0..<4096 {
+                    // Create unique transaction IDs to avoid collisions
+                    let txid = UInt16(i)
+                    payload[0] = UInt8(txid >> 8)
+                    payload[1] = UInt8(txid & 0xFF)
+                    _ = relay.query(payload, timeout: .seconds(10))
+                }
+
+                // Try to add one more query - this should fail with notReady
+                let overflowPayload = Data(repeating: 0xFF, count: 12)
+                relay.query(overflowPayload, timeout: .seconds(1)).whenComplete { result in
+                    switch result {
+                    case let .failure(error):
+                        XCTAssertEqual(
+                            error as? DNSUpstreamError,
+                            .notReady,
+                            "Expected .notReady error when pending map is full"
+                        )
+                        exp.fulfill()
+                    case .success:
+                        XCTFail("Expected .notReady error, but query succeeded")
+                    }
+
+                    // Clean up: stop the relay to cancel all pending queries
+                    relay.stop()
                 }
             }
         }

@@ -146,7 +146,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
         eventLoop.assertInEventLoop()
 
         // Ensure no collision with currently pending rewritten IDs
-        for _ in 0 ..< UInt16.max {
+        for _ in 0..<UInt16.max {
             let id = nextID
             nextID &+= 1
             if nextID == 0 { nextID = 1 }
@@ -155,7 +155,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
             }
         }
         // Extremely unlikely: pending table full
-        return UInt16.random(in: 1 ... UInt16.max)
+        return UInt16.random(in: 1...UInt16.max)
     }
 
     private func onRead(_ envelope: AddressedEnvelope<ByteBuffer>) {
@@ -166,14 +166,14 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
         // Security: Validate that the datagram is from the configured upstream server
         // to prevent DNS spoofing attacks from unauthorized sources
         guard let expectedRemote = remoteAddress,
-              envelope.remoteAddress == expectedRemote
+            envelope.remoteAddress == expectedRemote
         else {
             return
         }
 
         var buf = envelope.data
         guard let bytes = buf.readBytes(length: buf.readableBytes),
-              bytes.count >= 2
+            bytes.count >= 2
         else {
             return
         }

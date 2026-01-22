@@ -26,10 +26,10 @@ final class DNSFastSnifferTests: XCTestCase {
         // Header
         writer.writeUInt16(id)
         writer.writeUInt16(flags)
-        writer.writeUInt16(1) // QDCOUNT = 1
-        writer.writeUInt16(0) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(1)  // QDCOUNT = 1
+        writer.writeUInt16(0)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
 
         // Question
         writer.name(domain)
@@ -45,16 +45,16 @@ final class DNSFastSnifferTests: XCTestCase {
 
         // Header
         writer.writeUInt16(0x1234)
-        writer.writeUInt16(0x0100) // Query flags
-        writer.writeUInt16(1) // QDCOUNT = 1
+        writer.writeUInt16(0x0100)  // Query flags
+        writer.writeUInt16(1)  // QDCOUNT = 1
         writer.writeUInt16(0)
         writer.writeUInt16(0)
         writer.writeUInt16(0)
 
         // Question with compression pointer
         // Instead of writing a proper domain name, write a compression pointer (0xC0 prefix)
-        writer.writeUInt8(0xC0) // Compression pointer prefix
-        writer.writeUInt8(0x0C) // Offset
+        writer.writeUInt8(0xC0)  // Compression pointer prefix
+        writer.writeUInt8(0x0C)  // Offset
         writer.writeUInt16(DNSType.a.rawValue)
         writer.writeUInt16(DNSClass.internet.rawValue)
 
@@ -68,7 +68,7 @@ final class DNSFastSnifferTests: XCTestCase {
         // Header
         writer.writeUInt16(0x1234)
         writer.writeUInt16(0x0100)
-        writer.writeUInt16(2) // QDCOUNT = 2 (multiple questions)
+        writer.writeUInt16(2)  // QDCOUNT = 2 (multiple questions)
         writer.writeUInt16(0)
         writer.writeUInt16(0)
         writer.writeUInt16(0)
@@ -168,7 +168,7 @@ final class DNSFastSnifferTests: XCTestCase {
         // Header with QDCOUNT = 0
         writer.writeUInt16(0x1234)
         writer.writeUInt16(0x0100)
-        writer.writeUInt16(0) // QDCOUNT = 0
+        writer.writeUInt16(0)  // QDCOUNT = 0
         writer.writeUInt16(0)
         writer.writeUInt16(0)
         writer.writeUInt16(0)
@@ -197,14 +197,14 @@ final class DNSFastSnifferTests: XCTestCase {
         // Valid header
         writer.writeUInt16(0x1234)
         writer.writeUInt16(0x0100)
-        writer.writeUInt16(1) // QDCOUNT = 1
+        writer.writeUInt16(1)  // QDCOUNT = 1
         writer.writeUInt16(0)
         writer.writeUInt16(0)
         writer.writeUInt16(0)
 
         // Start writing domain but truncate it
-        writer.writeUInt8(7) // Length byte for "example"
-        writer.raw(Data("exa".utf8)) // Only write 3 bytes instead of 7
+        writer.writeUInt8(7)  // Length byte for "example"
+        writer.raw(Data("exa".utf8))  // Only write 3 bytes instead of 7
 
         let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
@@ -218,7 +218,7 @@ final class DNSFastSnifferTests: XCTestCase {
         // Valid header
         writer.writeUInt16(0x1234)
         writer.writeUInt16(0x0100)
-        writer.writeUInt16(1) // QDCOUNT = 1
+        writer.writeUInt16(1)  // QDCOUNT = 1
         writer.writeUInt16(0)
         writer.writeUInt16(0)
         writer.writeUInt16(0)
@@ -268,8 +268,8 @@ final class DNSFastSnifferTests: XCTestCase {
 
         // Write a label with length 64 (invalid, max is 63)
         writer.writeUInt8(64)
-        writer.raw(Data(repeating: 0x61, count: 64)) // 64 'a' characters
-        writer.writeUInt8(0) // Null terminator
+        writer.raw(Data(repeating: 0x61, count: 64))  // 64 'a' characters
+        writer.writeUInt8(0)  // Null terminator
         writer.writeUInt16(DNSType.a.rawValue)
         writer.writeUInt16(DNSClass.internet.rawValue)
 
@@ -310,7 +310,7 @@ final class DNSFastSnifferTests: XCTestCase {
         var writer = FBPacketBufferWriter()
 
         writer.writeUInt16(0x1234)
-        writer.writeUInt16(0x8100) // QR=1 (response), RD=1
+        writer.writeUInt16(0x8100)  // QR=1 (response), RD=1
         writer.writeUInt16(1)
         writer.writeUInt16(0)
         writer.writeUInt16(0)
@@ -339,7 +339,7 @@ final class DNSFastSnifferTests: XCTestCase {
         writer.writeUInt16(0)
 
         writer.name("example.com")
-        writer.writeUInt16(999) // Invalid QTYPE
+        writer.writeUInt16(999)  // Invalid QTYPE
         writer.writeUInt16(DNSClass.internet.rawValue)
 
         let buffer = FBDataPacketBuffer(writer.data)
@@ -360,7 +360,7 @@ final class DNSFastSnifferTests: XCTestCase {
 
         writer.name("example.com")
         writer.writeUInt16(DNSType.a.rawValue)
-        writer.writeUInt16(3) // Class CHAOS (not internet)
+        writer.writeUInt16(3)  // Class CHAOS (not internet)
 
         let buffer = FBDataPacketBuffer(writer.data)
         let result = DNSFastSniffer.sniffQuery(buffer)
