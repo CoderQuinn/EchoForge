@@ -236,16 +236,12 @@ public final class DNSService {
 
         return upstream.query(payload, timeout: .seconds(3))
             .map { [weak self] responseData -> Data? in
-                self?.eventLoop.execute {
-                    self?.breaker.onSuccess()
-                }
+                self?.breaker.onSuccess()
 
                 return responseData
             }
             .recover { [weak self] error in
-                self?.eventLoop.execute {
-                    self?.breaker.onFailure()
-                }
+                self?.breaker.onFailure()
 
                 switch error {
                 case DNSUpstreamError.timeout:
