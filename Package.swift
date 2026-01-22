@@ -11,7 +11,7 @@ let package = Package(
         .library(
             name: "EchoForge",
             targets: ["EchoForge"]
-        )
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/CoderQuinn/ForgeBase.git", from: "0.2.0"),
@@ -32,13 +32,18 @@ let package = Package(
                 .product(name: "NIOTransportServices", package: "swift-nio-transport-services"),
             ],
             swiftSettings: [
-                .define("FORGELOG_DISABLED", .when(configuration: .release))
+                .define("FORGELOG_DISABLED", .when(configuration: .release)),
             ]
         ),
         .testTarget(
             name: "EchoForgeTests",
-            dependencies: ["EchoForge"],
-            path: "Tests/EchoForgeTests"
+            dependencies: [
+                "EchoForge",
+                .product(name: "ForgeBase", package: "ForgeBase"),
+                .product(name: "NIO", package: "swift-nio"),
+            ],
+            path: "Tests",
+            sources: ["EchoForgeTests"]
         ),
     ]
 )

@@ -10,8 +10,8 @@
 
 import ForgeBase
 import Foundation
-import NIO
 import Network
+import NIO
 
 /// Fake IPv4 pool for DNS interception.
 ///
@@ -60,7 +60,7 @@ public final class FakeIPPool {
         let hostBits = UInt32(32 - prefixLength)
         hostMask = (hostBits == 32) ? UInt32.max : ((1 << hostBits) - 1)
 
-        // Exclude network (0) and broadcast (hostMask)
+        // Exclude network (0), .0.1, broadcast (hostMask)
         let usableHosts =
             hostMask > 3 ? hostMask - 3 : 0
 
@@ -87,11 +87,11 @@ public final class FakeIPPool {
             return nil
         }
 
-        for _ in 0..<capacity {
+        for _ in 0 ..< capacity {
             let host = offset
             offset += 1
             if offset >= hostMask {
-                offset = 2  // wrap back to first usable fake IP
+                offset = 2 // wrap back to first usable fake IP
             }
 
             // Skip:
@@ -105,7 +105,7 @@ public final class FakeIPPool {
             let candidateBE = baseBE | host
 
             guard let ip = FBIPv4(beValue: candidateBE).asNetworkIPv4Address,
-                ipToDomain[ip] == nil
+                  ipToDomain[ip] == nil
             else {
                 continue
             }
@@ -125,6 +125,8 @@ public final class FakeIPPool {
     /// Reverse lookup fake IP → domain.
     /// Must be called on pool eventLoop.
     public func reverseLookup(_ ip: IPv4Address) -> String? {
+        eventLoop.assertInEventLoop()
+
         let d = ipToDomain[ip]
         if d == nil {
             EFLog.fakeip("reverse miss ip=\(ip)")
@@ -136,6 +138,7 @@ public final class FakeIPPool {
     /// CIDR containment alone is NOT sufficient.
     public func isFakeIP(_ ip: IPv4Address) -> Bool {
         eventLoop.assertInEventLoop()
+
         return ipToDomain[ip] != nil
     }
 

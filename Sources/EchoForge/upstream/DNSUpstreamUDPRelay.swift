@@ -38,6 +38,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
 
     private var nextID: UInt16 = 1
     private var pendingMap: [UInt16: PendingQuery] = [:]
+    private let maxPending: Int = 4096
 
     public init(eventLoop: EventLoop, upstream: Upstream) {
         self.eventLoop = eventLoop
@@ -96,6 +97,10 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
             return eventLoop.makeFailedFuture(DNSUpstreamError.invalidPayload)
         }
 
+        if pendingMap.count >= maxPending {
+            return eventLoop.makeFailedFuture(DNSUpstreamError.notReady)
+        }
+
         return start().flatMap { [weak self, eventLoop = self.eventLoop] in
             guard let self = self else {
                 return eventLoop.makeFailedFuture(DNSUpstreamError.internalError)
@@ -141,7 +146,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
         eventLoop.assertInEventLoop()
 
         // Ensure no collision with currently pending rewritten IDs
-        for _ in 0..<UInt16.max {
+        for _ in 0 ..< UInt16.max {
             let id = nextID
             nextID &+= 1
             if nextID == 0 { nextID = 1 }
@@ -150,7 +155,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
             }
         }
         // Extremely unlikely: pending table full
-        return UInt16.random(in: 1...UInt16.max)
+        return UInt16.random(in: 1 ... UInt16.max)
     }
 
     private func onRead(_ envelope: AddressedEnvelope<ByteBuffer>) {
@@ -161,14 +166,14 @@ public final class DNSUpstreamUDPRelay: DNSUpstream {
         // Security: Validate that the datagram is from the configured upstream server
         // to prevent DNS spoofing attacks from unauthorized sources
         guard let expectedRemote = remoteAddress,
-            envelope.remoteAddress == expectedRemote
+              envelope.remoteAddress == expectedRemote
         else {
             return
         }
 
         var buf = envelope.data
         guard let bytes = buf.readBytes(length: buf.readableBytes),
-            bytes.count >= 2
+              bytes.count >= 2
         else {
             return
         }

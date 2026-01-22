@@ -75,8 +75,8 @@ public enum MinimalDNSParser {
         )
     }
 
-    public static func extractAnswers(from buffer: FBPacketBuffer) -> ([IPv4Address], Int) {
-        let placeholder: ([IPv4Address], Int) = ([], 0)  // IP and ttl
+    public static func extractAnswers(from buffer: FBPacketBuffer) -> ([IPv4Address], [Int]) {
+        let placeholder: ([IPv4Address], [Int]) = ([], []) // IP and ttl
         guard buffer.readableBytes >= 12 else {
             return placeholder
         }
@@ -99,31 +99,34 @@ public enum MinimalDNSParser {
             return v
         }
 
-        let id = try? readU16()  // ID
-        let flags = try? readU16()  // Flags
+        let id = try? readU16() // ID
+        let flags = try? readU16() // Flags
         let qd = try? readU16()
         let an = try? readU16()
-        let ns = try? readU16()  // NS
-        let ar = try? readU16()  // AR
+        let ns = try? readU16() // NS
+        let ar = try? readU16() // AR
 
         guard let id, let flags, let qd, let an, let ns, let ar else {
             return placeholder
         }
 
+        guard (flags & 0x8000) != 0 else { return placeholder } // QR
+        guard (flags & 0x000F) == 0 else { return placeholder } // RCODE
+
         // Skip questions
-        for _ in 0..<qd {
+        for _ in 0 ..< qd {
             let name = try? readName(from: buffer, offset: &offset)
             guard let name else {
                 return placeholder
             }
             guard offset + 4 <= buffer.readableBytes else { return placeholder }
-            offset += 4  // QTYPE + QCLASS
+            offset += 4 // QTYPE + QCLASS
         }
 
-        var outputs: [IPv4Address] = []  // ipv4s
-        var outTTL = Int.max
+        var outputs: [IPv4Address] = [] // ipv4s
+        var outTTL: [Int] = [] // ttls
 
-        for _ in 0..<an {
+        for _ in 0 ..< an {
             let name = try? readName(from: buffer, offset: &offset)
             guard let name else {
                 return placeholder
@@ -143,14 +146,14 @@ public enum MinimalDNSParser {
             }
 
             if type == DNSType.a.rawValue, cls == DNSClass.internet.rawValue, rdlength == 4,
-                let b0 = buffer.loadUInt8(at: offset),
-                let b1 = buffer.loadUInt8(at: offset + 1),
-                let b2 = buffer.loadUInt8(at: offset + 2),
-                let b3 = buffer.loadUInt8(at: offset + 3),
-                let ip = FBIPv4(a: b0, b: b1, c: b2, d: b3).asNetworkIPv4Address
+               let b0 = buffer.loadUInt8(at: offset),
+               let b1 = buffer.loadUInt8(at: offset + 1),
+               let b2 = buffer.loadUInt8(at: offset + 2),
+               let b3 = buffer.loadUInt8(at: offset + 3),
+               let ip = FBIPv4(a: b0, b: b1, c: b2, d: b3).asNetworkIPv4Address
             {
                 outputs.append(ip)
-                outTTL = min(outTTL, Int(ttl))
+                outTTL.append(Int(ttl))
             }
 
             offset += Int(rdlength)

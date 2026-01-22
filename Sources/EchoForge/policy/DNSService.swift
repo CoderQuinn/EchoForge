@@ -24,8 +24,8 @@
 
 import ForgeBase
 import Foundation
-import NIO
 import Network
+import NIO
 
 public struct DialDecision {
     public let dialIP: IPv4Address?
@@ -40,6 +40,12 @@ public final class DNSService {
     private let caches: DNSCache
     private let ipPool: FakeIPPool
     private let upstream: DNSUpstreamUDPRelay
+
+    private var inflightPrefetch: Set<String> = []
+    private let prefetchCooldown: TimeAmount = .seconds(10)
+    private var prefetchCooldownUntils: [String: NIODeadline] = [:]
+
+    private let breaker = DNSUpstreamBreaker()
 
     private var sweepTask: RepeatedTask?
 
@@ -102,7 +108,6 @@ public final class DNSService {
                 )
             )
         case .passthrough:
-
             return handleUpstream(buffer: buffer, fast: fast)
         }
     }
@@ -183,7 +188,7 @@ public final class DNSService {
 
     // MARK: - AAAA fallback (policy: IPv6 not supported, synthesize A)
 
-    private func handleAAAAQueryFallback(query: DNSQuery, buffer: FBPacketBuffer)
+    private func handleAAAAQueryFallback(query: DNSQuery, buffer _: FBPacketBuffer)
         -> EventLoopFuture<Data?>
     {
         return eventLoop.makeSucceededFuture(
@@ -202,7 +207,7 @@ public final class DNSService {
         eventLoop.assertInEventLoop()
 
         if let v4 = parseInAddrArpa(query.question.name), ipPool.isFakeIP(v4),
-            let domain = ipPool.reverseLookup(v4)
+           let domain = ipPool.reverseLookup(v4)
         {
             let resp = DNSMessageBuilder.builePTRResponse(
                 query: query,
@@ -223,11 +228,25 @@ public final class DNSService {
     ) -> EventLoopFuture<Data?> {
         eventLoop.assertInEventLoop()
 
+        if !breaker.allowRequest() {
+            return eventLoop.makeSucceededFuture(nil)
+        }
+
         let payload = buffer.materialize()
 
         return upstream.query(payload, timeout: .seconds(3))
-            .map { Optional($0) }
-            .recover { error in
+            .map { [weak self] responseData -> Data? in
+                self?.eventLoop.execute {
+                    self?.breaker.onSuccess()
+                }
+
+                return responseData
+            }
+            .recover { [weak self] error in
+                self?.eventLoop.execute {
+                    self?.breaker.onFailure()
+                }
+
                 switch error {
                 case DNSUpstreamError.timeout:
                     EFLog.upstream("timeout")
@@ -278,18 +297,32 @@ public final class DNSService {
         eventLoop.assertInEventLoop()
 
         let key = DNSCacheKey(domain: domain, type: .a)
-        if caches.lookup(key)?.realIPs != nil { return }
+        if caches.lookup(key)?.realIPs?.first != nil { return }
+
+        let now = NIODeadline.now()
+        if let until = prefetchCooldownUntils[domain], until > now {
+            return
+        }
+        guard inflightPrefetch.insert(domain).inserted else {
+            return
+        }
 
         let payload = DNSMessageBuilder.buildAQuery(domain: domain)
-        upstream.query(payload, timeout: .seconds(2)).whenSuccess { [weak self] resp in
+        upstream.query(payload, timeout: .seconds(2)).whenComplete { [weak self] result in
             guard let self else { return }
             self.eventLoop.execute {
-                self.onPrefetchAResult(domain: domain, response: resp)
+                self.inflightPrefetch.remove(domain)
+                switch result {
+                case let .success(resp):
+                    self.onPrefetchAResult(domain: domain, response: resp)
+                case .failure:
+                    self.prefetchCooldownUntils[domain] = .now() + self.prefetchCooldown
+                }
             }
         }
     }
 
-    private func prefetchAIfNeeded(domain: String, buffer: FBPacketBuffer) {
+    private func prefetchAIfNeeded(domain: String, buffer _: FBPacketBuffer) {
         // Delegate to the main implementation to ensure correct query type
         prefetchAIfNeeded(domain: domain)
     }
@@ -300,12 +333,20 @@ public final class DNSService {
         let key = DNSCacheKey(domain: domain, type: .a)
         guard var entry = caches.lookup(key) else { return }
 
-        let (ips, ttl) = MinimalDNSParser.extractAnswers(from: FBDataPacketBuffer(response))
+        let (ips, ttls) = MinimalDNSParser.extractAnswers(from: FBDataPacketBuffer(response))
 
         if ips.isEmpty { return }
+
+        precondition(ips.count == ttls.count)
+
+        var maxUpstreamTTL = ttls.max() ?? 0
+        maxUpstreamTTL = max(30, maxUpstreamTTL)
+
+        let cacheTTL = min(maxUpstreamTTL, ttl)
+
         let fakeIP = entry.fakeIP
         entry.realIPs = ips
-        entry.expireAt = .now() + .seconds(Int64(ttl))
+        entry.expireAt = .now() + .seconds(Int64(cacheTTL))
         caches.insert(entry)
     }
 
@@ -316,7 +357,7 @@ public final class DNSService {
             guard let self else { return }
             self.eventLoop.assertInEventLoop()
 
-            let interval = Int64(max(10, self.ttl / 2))
+            let interval = Int64(5)
             self.sweepTask = self.eventLoop.scheduleRepeatedTask(
                 initialDelay: .seconds(interval),
                 delay: .seconds(interval)
@@ -357,7 +398,7 @@ public final class DNSService {
 
         return
             FBIPv4Parse
-            .parseDottedDecimal(Substring(reversed))?
-            .asNetworkIPv4Address
+                .parseDottedDecimal(Substring(reversed))?
+                .asNetworkIPv4Address
     }
 }
