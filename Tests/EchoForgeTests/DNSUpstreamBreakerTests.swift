@@ -75,13 +75,12 @@ final class DNSUpstreamBreakerTests: XCTestCase {
         breaker.onFailure()
         breaker.onFailure()
         
-        XCTAssertFalse(breaker.allowRequest(), "Should be degraded after threshold")
+        let now = NIODeadline.now()
+        XCTAssertFalse(breaker.allowRequest(now: now), "Should be degraded after threshold")
         
-        // Wait for degradation period to expire
-        sleep(2)
-        
-        // Should be allowed again
-        XCTAssertTrue(breaker.allowRequest(), "Should allow after degradation period")
+        // Test with future time after degradation period expires
+        let afterExpiry = now + .seconds(2)
+        XCTAssertTrue(breaker.allowRequest(now: afterExpiry), "Should allow after degradation period")
         
         // New failures should not immediately degrade (streak was reset)
         breaker.onFailure()
@@ -133,33 +132,34 @@ final class DNSUpstreamBreakerTests: XCTestCase {
         let degradeDuration: Int64 = 2  // 2 seconds
         let breaker = DNSUpstreamBreaker(failThreshold: 2, degradeDuration: .seconds(degradeDuration))
         
-        // Trigger degradation
+        // Trigger degradation and capture the time
+        let degradeTime = NIODeadline.now()
         breaker.onFailure()
         breaker.onFailure()
         
-        XCTAssertFalse(breaker.allowRequest(), "Should be degraded immediately")
+        XCTAssertFalse(breaker.allowRequest(now: degradeTime), "Should be degraded immediately")
         
-        // Wait half the duration
-        sleep(UInt32(degradeDuration / 2))
-        XCTAssertFalse(breaker.allowRequest(), "Should still be degraded at half duration")
+        // Check at half duration
+        let halfDuration = degradeTime + .seconds(degradeDuration / 2)
+        XCTAssertFalse(breaker.allowRequest(now: halfDuration), "Should still be degraded at half duration")
         
-        // Wait for full duration to expire
-        sleep(UInt32(degradeDuration / 2 + 1))
-        XCTAssertTrue(breaker.allowRequest(), "Should allow after degradation period expires")
+        // Check after full duration expires
+        let afterExpiry = degradeTime + .seconds(degradeDuration + 1)
+        XCTAssertTrue(breaker.allowRequest(now: afterExpiry), "Should allow after degradation period expires")
     }
     
     func testCustomDegradationDuration() {
         let breaker = DNSUpstreamBreaker(failThreshold: 1, degradeDuration: .seconds(3))
         
         // Trigger degradation
+        let degradeTime = NIODeadline.now()
         breaker.onFailure()
         
-        XCTAssertFalse(breaker.allowRequest(), "Should be degraded")
+        XCTAssertFalse(breaker.allowRequest(now: degradeTime), "Should be degraded")
         
-        // Wait for degradation to expire
-        sleep(4)
-        
-        XCTAssertTrue(breaker.allowRequest(), "Should allow after 3 second degradation period")
+        // Check after degradation expires
+        let afterExpiry = degradeTime + .seconds(4)
+        XCTAssertTrue(breaker.allowRequest(now: afterExpiry), "Should allow after 3 second degradation period")
     }
     
     func testDegradationWithExplicitTimeChecks() {
@@ -236,13 +236,14 @@ final class DNSUpstreamBreakerTests: XCTestCase {
         let breaker = DNSUpstreamBreaker(failThreshold: 2, degradeDuration: .seconds(1))
         
         // First degradation cycle
+        let firstDegradeTime = NIODeadline.now()
         breaker.onFailure()
         breaker.onFailure()
-        XCTAssertFalse(breaker.allowRequest(), "Should be degraded")
+        XCTAssertFalse(breaker.allowRequest(now: firstDegradeTime), "Should be degraded")
         
-        // Wait for recovery
-        sleep(2)
-        XCTAssertTrue(breaker.allowRequest(), "Should recover after period")
+        // Check recovery after period
+        let afterFirstExpiry = firstDegradeTime + .seconds(2)
+        XCTAssertTrue(breaker.allowRequest(now: afterFirstExpiry), "Should recover after period")
         
         // Second degradation cycle
         breaker.onFailure()
@@ -274,17 +275,16 @@ final class DNSUpstreamBreakerTests: XCTestCase {
         breaker.onFailure()
         
         XCTAssertTrue(breaker.allowRequest(), "Should allow request")
+        let degradeTime = NIODeadline.now()
         breaker.onFailure()
         
         // Now degraded - requests should be blocked
-        XCTAssertFalse(breaker.allowRequest(), "Should block after threshold failures")
-        XCTAssertFalse(breaker.allowRequest(), "Should continue blocking")
+        XCTAssertFalse(breaker.allowRequest(now: degradeTime), "Should block after threshold failures")
+        XCTAssertFalse(breaker.allowRequest(now: degradeTime), "Should continue blocking")
         
-        // Wait for degradation period
-        sleep(6)
-        
-        // Should allow retry
-        XCTAssertTrue(breaker.allowRequest(), "Should allow retry after degradation")
+        // Check retry after degradation period
+        let afterExpiry = degradeTime + .seconds(6)
+        XCTAssertTrue(breaker.allowRequest(now: afterExpiry), "Should allow retry after degradation")
         
         // Upstream recovered
         breaker.onSuccess()
@@ -295,9 +295,10 @@ final class DNSUpstreamBreakerTests: XCTestCase {
         // Verify that DNSUpstreamBreaker conforms to DNSBreaker protocol
         let breaker: DNSBreaker = DNSUpstreamBreaker(failThreshold: 3, degradeDuration: .seconds(5))
         
-        XCTAssertTrue(breaker.allowRequest(), "Protocol methods should work")
+        let now = NIODeadline.now()
+        XCTAssertTrue(breaker.allowRequest(now: now), "Protocol methods should work")
         breaker.onSuccess()
         breaker.onFailure()
-        XCTAssertTrue(breaker.allowRequest(), "Protocol methods should work after calls")
+        XCTAssertTrue(breaker.allowRequest(now: now), "Protocol methods should work after calls")
     }
 }
