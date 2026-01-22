@@ -577,7 +577,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1",  // TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 
@@ -612,7 +612,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1",  // TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 
@@ -632,12 +632,12 @@ final class DNSServiceTests: XCTestCase {
 
         wait(for: [exp1], timeout: 1.0)
 
-        // Wait for prefetch to timeout and set cooldown
-        loop.scheduleTask(in: .seconds(3)) {
+        // Wait for prefetch to timeout and set cooldown (prefetch timeout is 2 seconds)
+        loop.scheduleTask(in: .milliseconds(2500)) {
             exp2.fulfill()
         }
 
-        wait(for: [exp2], timeout: 4.0)
+        wait(for: [exp2], timeout: 3.0)
 
         // Make another query during cooldown period
         // This should NOT trigger another prefetch due to cooldown
@@ -656,7 +656,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1",  // TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 
@@ -701,16 +701,9 @@ final class DNSServiceTests: XCTestCase {
         let queryData = DNSMessageBuilder.buildAQuery(domain: domain)
         let buffer = FBDataPacketBuffer(queryData)
 
-        var assignedFakeIP: IPv4Address?
-
         // First query to assign fake IP
         service.handleDNSPayload(buffer, loop).whenComplete { result in
-            if case let .success(responseData) = result, let data = responseData,
-                data.count >= 12
-            {
-                // Try to extract fake IP from response (simplified)
-                // In real scenario, we'd parse the DNS response properly
-            }
+            XCTAssertNotNil(result.tryGet())
             exp1.fulfill()
         }
 
