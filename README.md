@@ -6,7 +6,7 @@
 https://github.com/CoderQuinn/TunForge/actions/workflows/ci.yml
 )
 ![Status](https://img.shields.io/badge/status-core_stable_(pre--1.0)-blue)
-![Coverage](https://img.shields.io/badge/Coverage-80%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-83.50%25-brightgreen)
 ![Swift](https://img.shields.io/badge/Swift-6.1-orange?logo=swift)
 ![Platform](https://img.shields.io/badge/Platform-iOS%2013%2B%20%7C%20macOS%2011%2B-blue)
 ![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen)
@@ -82,7 +82,7 @@ future.whenSuccess { response in
 ## Testing
 
 The test suite lives under `Tests/EchoForgeTests` and can be run with SwiftPM (e.g. run `swift test` from the package root).
-Current unit test coverage: **80%**.
+Current unit test coverage: **83.50%**.
 
 ## Design Notes
 
