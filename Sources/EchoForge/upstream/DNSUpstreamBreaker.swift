@@ -104,7 +104,7 @@ final class DNSUpstreamBreaker: DNSBreaker {
     ///
     /// Call this for any failure condition including:
     /// - Request timeouts
-    /// - Connection errors  
+    /// - Connection errors
     /// - Upstream not ready errors
     func onFailure() {
         failureStreak += 1
