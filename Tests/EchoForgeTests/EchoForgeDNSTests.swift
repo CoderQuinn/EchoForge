@@ -219,7 +219,8 @@ final class DNSUpstreamUDPRelayTests: XCTestCase {
         loop.execute {
             // Start the relay to ensure channel is ready
             relay.start().whenComplete { _ in
-                // Fill up the pending map with 4096 queries
+                // Fill up the pending map with 4096 queries (maxPending limit)
+                // Note: 4096 matches the private maxPending constant in DNSUpstreamUDPRelay
                 // We use a very long timeout to keep them pending
                 var payload = Data(repeating: 0, count: 12)
                 for i in 0..<4096 {
@@ -251,6 +252,6 @@ final class DNSUpstreamUDPRelayTests: XCTestCase {
             }
         }
 
-        wait(for: [exp], timeout: 5.0)
+        wait(for: [exp], timeout: 1.0)
     }
 }
