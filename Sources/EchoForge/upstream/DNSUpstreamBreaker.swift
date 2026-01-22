@@ -26,9 +26,13 @@ final class DNSUpstreamBreaker: DNSBreaker {
 
     /// Whether a new upstream request is allowed *now*
     func allowRequest(now: NIODeadline = .now()) -> Bool {
-        if let until = degradedUntil, now < until {
+        guard let until = degradedUntil else {
+            return true
+        }
+        if now < until {
             return false
         }
+        degradedUntil = nil
         return true
     }
 
