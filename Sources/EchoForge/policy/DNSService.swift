@@ -357,7 +357,8 @@ public final class DNSService {
             guard let self else { return }
             self.eventLoop.assertInEventLoop()
 
-            let interval = Int64(5)
+            let intervalSeconds = max(10, ttl / 2)
+            let interval = Int64(intervalSeconds)
             self.sweepTask = self.eventLoop.scheduleRepeatedTask(
                 initialDelay: .seconds(interval),
                 delay: .seconds(interval)
