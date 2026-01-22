@@ -89,8 +89,8 @@ final class DNSServiceTests: XCTestCase {
             case let .success(responseData):
                 XCTAssertNotNil(responseData)
                 // Both responses should return the same fake IP
-                var count1 = responseData?.count ?? 0
-                var count2 = firstResponseData?.count ?? 1
+                let count1 = responseData?.count ?? 0
+                let count2 = firstResponseData?.count ?? 1
                 XCTAssertEqual(count1, count2)
                 exp2.fulfill()
             case let .failure(error):
@@ -590,7 +590,12 @@ final class DNSServiceTests: XCTestCase {
         // First query - should trigger prefetch
         let buffer1 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet(), "First query should succeed")
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data, "First query should succeed")
+            case let .failure(error):
+                XCTFail("First query failed: \(error)")
+            }
             exp1.fulfill()
         }
 
@@ -598,7 +603,12 @@ final class DNSServiceTests: XCTestCase {
         // This should NOT trigger a duplicate prefetch request
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet(), "Second query should succeed")
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data, "Second query should succeed")
+            case let .failure(error):
+                XCTFail("Second query failed: \(error)")
+            }
             exp2.fulfill()
         }
 
@@ -626,7 +636,12 @@ final class DNSServiceTests: XCTestCase {
         // First query - will trigger a prefetch that will fail
         let buffer1 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet(), "First query should return fake IP")
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data, "First query should return fake IP")
+            case let .failure(error):
+                XCTFail("First query failed: \(error)")
+            }
             exp1.fulfill()
         }
 
@@ -644,7 +659,12 @@ final class DNSServiceTests: XCTestCase {
         // This should NOT trigger another prefetch due to cooldown
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet(), "Second query should still return fake IP")
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data, "Second query should still return fake IP")
+            case let .failure(error):
+                XCTFail("Second query failed: \(error)")
+            }
             exp3.fulfill()
         }
 
@@ -672,19 +692,34 @@ final class DNSServiceTests: XCTestCase {
         // Only the first should trigger a prefetch
         let buffer1 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet())
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data)
+            case let .failure(error):
+                XCTFail("Query 1 failed: \(error)")
+            }
             exp1.fulfill()
         }
 
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet())
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data)
+            case let .failure(error):
+                XCTFail("Query 2 failed: \(error)")
+            }
             exp2.fulfill()
         }
 
         let buffer3 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer3, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet())
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data)
+            case let .failure(error):
+                XCTFail("Query 3 failed: \(error)")
+            }
             exp3.fulfill()
         }
 
@@ -704,7 +739,12 @@ final class DNSServiceTests: XCTestCase {
 
         // First query to assign fake IP
         service.handleDNSPayload(buffer, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet())
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data)
+            case let .failure(error):
+                XCTFail("First query failed: \(error)")
+            }
             exp1.fulfill()
         }
 
@@ -715,7 +755,12 @@ final class DNSServiceTests: XCTestCase {
         // Make another query - if real IP exists, no prefetch should occur
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
-            XCTAssertNotNil(result.tryGet())
+            switch result {
+            case let .success(data):
+                XCTAssertNotNil(data)
+            case let .failure(error):
+                XCTFail("Second query failed: \(error)")
+            }
             exp2.fulfill()
         }
 

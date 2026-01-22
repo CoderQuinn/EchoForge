@@ -8,7 +8,7 @@
 import ForgeBase
 import Foundation
 
-public enum DNSType: UInt16 {
+public enum DNSType: UInt16, Sendable {
     case invalid = 0
 
     case a = 1
@@ -19,17 +19,17 @@ public enum DNSType: UInt16 {
     case any = 255
 }
 
-public enum DNSClass: UInt16 {
+public enum DNSClass: UInt16, Sendable {
     case internet = 1
     case any = 255
 }
 
-public enum DNSMessageType: UInt8 {
+public enum DNSMessageType: UInt8, Sendable {
     case query = 0
     case response = 1
 }
 
-public enum DNSReturnStatus: Equatable {
+public enum DNSReturnStatus: Equatable, Sendable {
     case success
     case formatError
     case serverFailure
@@ -63,7 +63,7 @@ public enum DNSReturnStatus: Equatable {
     }
 }
 
-public struct DNSQuestion {
+public struct DNSQuestion: Sendable {
     public let name: String
     public let type: DNSType
     public let qclass: DNSClass
@@ -81,7 +81,7 @@ extension DNSQuestion {
     }
 }
 
-public struct DNSHeader {
+public struct DNSHeader: Sendable {
     public let id: UInt16
     public let flags: UInt16
     public let qdCount: UInt16
@@ -94,7 +94,7 @@ public struct DNSHeader {
     public var rcode: DNSReturnStatus { DNSReturnStatus(rawValue: UInt8(flags & 0x000F)) }
 }
 
-public struct DNSQuery {
+public struct DNSQuery: Sendable {
     public let header: DNSHeader
     public let question: DNSQuestion
 }

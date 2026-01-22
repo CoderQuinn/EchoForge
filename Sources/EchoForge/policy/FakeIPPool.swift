@@ -19,7 +19,7 @@ import Network
 /// - All UInt32 values are NETWORK BYTE ORDER (big-endian)
 /// - Only IPs actually allocated by this pool are considered "fake"
 /// - Must be accessed from the bound EventLoop
-public final class FakeIPPool {
+public final class FakeIPPool: @unchecked Sendable {
     private let eventLoop: EventLoop
 
     /// Network base address (UInt32BE)

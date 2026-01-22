@@ -33,7 +33,7 @@ public struct DialDecision {
     public let fromFakeIP: Bool
 }
 
-public final class DNSService {
+public final class DNSService: @unchecked Sendable {
     public let eventLoop: EventLoop
 
     private let ttl: Int

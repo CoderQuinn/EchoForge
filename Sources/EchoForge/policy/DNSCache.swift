@@ -11,7 +11,7 @@ import Foundation
 import NIO
 import Network
 
-public struct DNSCacheKey: Hashable {
+public struct DNSCacheKey: Hashable, Sendable {
     let domain: String
     let type: DNSType
 
@@ -21,7 +21,7 @@ public struct DNSCacheKey: Hashable {
     }
 }
 
-public struct DNSCacheEntry {
+public struct DNSCacheEntry: Sendable {
     let key: DNSCacheKey
     let fakeIP: IPv4Address
     var expireAt: NIODeadline
@@ -41,7 +41,7 @@ public struct DNSCacheEntry {
     }
 }
 
-public final class DNSCache {
+public final class DNSCache: @unchecked Sendable {
     private let eventLoop: EventLoop
     private var caches: [DNSCacheKey: DNSCacheEntry] = [:]
 
