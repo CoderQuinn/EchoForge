@@ -62,7 +62,7 @@ public final class FakeIPPool {
 
         // Exclude network (0), .0.1, broadcast (hostMask)
         let usableHosts =
-            hostMask > 3 ? hostMask - 3 : 0
+            hostMask > 2 ? hostMask - 2 : 0
 
         capacity = usableHosts
     }
