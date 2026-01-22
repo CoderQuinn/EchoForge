@@ -632,7 +632,8 @@ final class DNSServiceTests: XCTestCase {
 
         wait(for: [exp1], timeout: 1.0)
 
-        // Wait for prefetch to timeout and set cooldown (prefetch timeout is 2 seconds)
+        // Wait for prefetch to timeout (implementation uses .seconds(2) timeout)
+        // and cooldown to be set. Using 2.5s to ensure timeout completes.
         loop.scheduleTask(in: .milliseconds(2500)) {
             exp2.fulfill()
         }
