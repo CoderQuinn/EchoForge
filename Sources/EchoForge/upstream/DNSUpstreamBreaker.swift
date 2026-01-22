@@ -79,7 +79,7 @@ final class DNSUpstreamBreaker: DNSBreaker {
 
     /// Checks whether a new upstream request is allowed at the current time.
     ///
-    /// - Parameter now: The current time. Defaults to the current deadline.
+    /// - Parameter now: The current time. This implementation defaults to `.now()` if not specified.
     /// - Returns: `false` if currently in degraded state, `true` otherwise.
     func allowRequest(now: NIODeadline = .now()) -> Bool {
         if let until = degradedUntil, now < until {
