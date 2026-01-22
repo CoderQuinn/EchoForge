@@ -30,7 +30,7 @@ private struct PendingQuery {
 }
 
 /// UDP/53 DNS upstream relay with TXID rewrite.
-public final class DNSUpstreamUDPRelay: DNSUpstream {
+public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
     private let eventLoop: EventLoop
     private let upstream: Upstream
     private var channel: Channel?

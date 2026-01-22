@@ -42,8 +42,7 @@ let package = Package(
                 .product(name: "ForgeBase", package: "ForgeBase"),
                 .product(name: "NIO", package: "swift-nio"),
             ],
-            path: "Tests",
-            sources: ["EchoForgeTests"]
+            path: "Tests/EchoForgeTests",
         ),
     ]
 )
