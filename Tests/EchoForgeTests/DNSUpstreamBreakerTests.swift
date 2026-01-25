@@ -11,7 +11,6 @@ import XCTest
 @testable import EchoForge
 
 final class DNSUpstreamBreakerTests: XCTestCase {
-
     // MARK: - Basic Behavior Tests
 
     func testAllowRequestWhenNotDegraded() {

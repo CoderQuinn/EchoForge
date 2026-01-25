@@ -14,6 +14,7 @@ public enum DNSMessageBuilder {
 
     // Query for A record
     public static func buildAQuery(domain: String) -> Data {
+        EFLog.debug("build A query domain=\(domain)")
         var writer = FBPacketBufferWriter()
         let id = UInt16.random(in: 1...UInt16.max)
 
@@ -37,6 +38,7 @@ public enum DNSMessageBuilder {
 
     // Response for A query
     public static func buildAResponse(query: DNSQuery, fakeIPv4: IPv4Address, ttl: UInt32) -> Data {
+        EFLog.debug("build A response domain=\(query.question.name) ttl=\(ttl)")
         var writer = FBPacketBufferWriter()
         let flags: UInt16 =
             0x8000  // QR = 1 (response)
@@ -69,6 +71,7 @@ public enum DNSMessageBuilder {
 
     // Response for PTR query
     public static func builePTRResponse(query: DNSQuery, ptrDomain: String, ttl: UInt32) -> Data {
+        EFLog.debug("build PTR response domain=\(query.question.name) ttl=\(ttl)")
         var writer = FBPacketBufferWriter()
         let flags: UInt16 =
             0x8000  // QR = 1 (response)
@@ -106,6 +109,7 @@ public enum DNSMessageBuilder {
         id: UInt16,
         originalQuestion: Data
     ) -> Data {
+        EFLog.debug("build no-answer response id=\(id)")
         return buildRefuseResponse(id: id, rcode: .success, originalQuestion: originalQuestion)
     }
 
@@ -115,6 +119,7 @@ public enum DNSMessageBuilder {
         rcode: DNSReturnStatus,
         originalQuestion: Data
     ) -> Data {
+        EFLog.debug("build refuse response id=\(id) rcode=\(rcode)")
         var writer = FBPacketBufferWriter()
         let flags: UInt16 =
             0x8000  // QR = 1 (response)
@@ -135,6 +140,7 @@ public enum DNSMessageBuilder {
     }
 
     public static func buildServFailResponse(id: UInt16, originalQuestion: Data) -> Data {
+        EFLog.warn("build servfail response id=\(id)")
         return buildRefuseResponse(
             id: id,
             rcode: .serverFailure,

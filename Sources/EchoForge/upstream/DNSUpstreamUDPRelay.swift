@@ -49,6 +49,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
         eventLoop.assertInEventLoop()
 
         if channel != nil {
+            EFLog.debug("upstream relay start: already started")
             return eventLoop.makeSucceededVoidFuture()
         }
         do {
@@ -57,6 +58,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
                 port: Int(upstream.port)
             )
         } catch {
+            EFLog.error("upstream relay resolve failed host=\(upstream.host) port=\(upstream.port)")
             return eventLoop.makeFailedFuture(error)
         }
 
@@ -70,12 +72,16 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
             }
         return bootstrap.bind(host: "0.0.0.0", port: 0).map { [weak self] ch in
             self?.channel = ch
+            EFLog.info("upstream relay started -> \(self?.upstream.host ?? "-"):\(self?.upstream.port ?? 0)")
         }
     }
 
     public func stop() {
         eventLoop.assertInEventLoop()
 
+        if channel != nil {
+            EFLog.info("upstream relay stopping")
+        }
         channel?.close(promise: nil)
         channel = nil
         remoteAddress = nil
@@ -94,10 +100,12 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
         eventLoop.assertInEventLoop()
 
         guard originalPayload.count >= 12 else {
+            EFLog.warn("upstream relay query: invalid payload size=\(originalPayload.count)")
             return eventLoop.makeFailedFuture(DNSUpstreamError.invalidPayload)
         }
 
         if pendingMap.count >= maxPending {
+            EFLog.warn("upstream relay query: pending full count=\(pendingMap.count)")
             return eventLoop.makeFailedFuture(DNSUpstreamError.notReady)
         }
 
@@ -106,6 +114,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
                 return eventLoop.makeFailedFuture(DNSUpstreamError.internalError)
             }
             guard let ch = self.channel, let remoteAddress = self.remoteAddress else {
+                EFLog.warn("upstream relay query: not ready")
                 return self.eventLoop.makeFailedFuture(DNSUpstreamError.notReady)
             }
 
@@ -122,6 +131,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
                 self.eventLoop.assertInEventLoop()
 
                 if let pending = self.pendingMap.removeValue(forKey: rewrittedID) {
+                    EFLog.warn("upstream relay timeout id=\(rewrittedID)")
                     pending.promise.fail(DNSUpstreamError.timeout)
                 }
             }
@@ -168,6 +178,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
         guard let expectedRemote = remoteAddress,
             envelope.remoteAddress == expectedRemote
         else {
+            EFLog.warn("upstream relay dropped packet from unexpected remote")
             return
         }
 
@@ -175,12 +186,14 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
         guard let bytes = buf.readBytes(length: buf.readableBytes),
             bytes.count >= 2
         else {
+            EFLog.debug("upstream relay dropped empty response")
             return
         }
         var data = Data(bytes)
 
         let rewrittenID = (UInt16(data[0]) << 8) | UInt16(data[1])
         guard let pending = pendingMap.removeValue(forKey: rewrittenID) else {
+            EFLog.debug("upstream relay response unmatched id=\(rewrittenID)")
             return
         }
 

@@ -194,7 +194,7 @@ final class DNSUpstreamUDPRelayTests: XCTestCase {
             let payload = Data(repeating: 0, count: 12)
             relay.query(payload, timeout: .milliseconds(50)).whenComplete { result in
                 switch result {
-                case let .failure(error):
+                case .failure(let error):
                     XCTAssertEqual(error as? DNSUpstreamError, .timeout)
                     exp.fulfill()
                 case .success:
@@ -235,7 +235,7 @@ final class DNSUpstreamUDPRelayTests: XCTestCase {
                 let overflowPayload = Data(repeating: 0xFF, count: 12)
                 relay.query(overflowPayload, timeout: .seconds(1)).whenComplete { result in
                     switch result {
-                    case let .failure(error):
+                    case .failure(let error):
                         XCTAssertEqual(
                             error as? DNSUpstreamError,
                             .notReady,

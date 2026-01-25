@@ -29,6 +29,7 @@ public enum RFC1035 {
 public enum MinimalDNSParser {
     public static func parseQuery(_ buffer: FBPacketBuffer) throws -> DNSQuery {
         guard buffer.readableBytes >= 12 else {
+            EFLog.warn("parse query: truncated header")
             throw ParseError.truncated
         }
 
@@ -59,9 +60,11 @@ public enum MinimalDNSParser {
         )
 
         guard !header.isResponse else {
+            EFLog.warn("parse query: not a query (response flag set)")
             throw ParseError.notQuery
         }
         guard qd >= 1 else {
+            EFLog.warn("parse query: no questions")
             throw ParseError.noQuestions
         }
 
@@ -78,6 +81,7 @@ public enum MinimalDNSParser {
     public static func extractAnswers(from buffer: FBPacketBuffer) -> ([IPv4Address], [Int]) {
         let placeholder: ([IPv4Address], [Int]) = ([], [])  // IP and ttl
         guard buffer.readableBytes >= 12 else {
+            EFLog.debug("extract answers: truncated header")
             return placeholder
         }
 
@@ -110,8 +114,14 @@ public enum MinimalDNSParser {
             return placeholder
         }
 
-        guard (flags & 0x8000) != 0 else { return placeholder }  // QR
-        guard (flags & 0x000F) == 0 else { return placeholder }  // RCODE
+        guard (flags & 0x8000) != 0 else {
+            EFLog.debug("extract answers: not a response")
+            return placeholder
+        }  // QR
+        guard (flags & 0x000F) == 0 else {
+            EFLog.debug("extract answers: non-zero rcode")
+            return placeholder
+        }  // RCODE
 
         // Skip questions
         for _ in 0..<qd {
@@ -179,16 +189,19 @@ public enum MinimalDNSParser {
         while true {
             // Loop / cycle protection
             if !visitedOffsets.insert(cursor).inserted {
+                EFLog.warn("parse name: pointer loop at offset=\(cursor)")
                 throw ParseError.pointerLoop
             }
 
             guard let len = buffer.loadUInt8(at: cursor) else {
+                EFLog.warn("parse name: truncated at offset=\(cursor)")
                 throw ParseError.truncated
             }
 
             // Compression pointer: 11xxxxxx xxxxxxxx
             if (len & RFC1035.pointerMask) == RFC1035.pointerValue {
                 guard let second = buffer.loadUInt8(at: cursor + 1) else {
+                    EFLog.warn("parse name: truncated pointer at offset=\(cursor)")
                     throw ParseError.truncated
                 }
 
@@ -197,6 +210,7 @@ public enum MinimalDNSParser {
                 )
                 // Pointer must be inside message
                 guard pointerOffset < buffer.readableBytes else {
+                    EFLog.warn("parse name: pointer out of bounds offset=\(pointerOffset)")
                     throw ParseError.truncated
                 }
 
@@ -220,6 +234,7 @@ public enum MinimalDNSParser {
 
             // RFC: label length <= 63
             guard len <= RFC1035.maxLabelLength else {
+                EFLog.warn("parse name: label too long len=\(len)")
                 throw ParseError.invalidName
             }
 
@@ -228,18 +243,22 @@ public enum MinimalDNSParser {
             totalNameBytes += 1 + labelLen
 
             guard totalNameBytes <= RFC1035.maxNameLength else {
+                EFLog.warn("parse name: name too long bytes=\(totalNameBytes)")
                 throw ParseError.invalidName
             }
 
             guard let slice = buffer.slice(from: cursor, length: labelLen) else {
+                EFLog.warn("parse name: slice failed")
                 throw ParseError.truncated
             }
 
             guard let payload = slice as? FBPacketBuffer else {
+                EFLog.warn("parse name: buffer type mismatch")
                 throw ParseError.bufferTypeMismatch
             }
 
             guard let label = String(data: payload.materialize(), encoding: .utf8) else {
+                EFLog.warn("parse name: invalid label encoding")
                 throw ParseError.invalidName
             }
 

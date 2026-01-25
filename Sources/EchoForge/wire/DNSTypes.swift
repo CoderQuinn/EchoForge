@@ -46,7 +46,7 @@ public enum DNSReturnStatus: Equatable, Sendable {
         case .nameError: return 3
         case .notImplemented: return 4
         case .refused: return 5
-        case let .reserved(raw): return raw
+        case .reserved(let raw): return raw
         }
     }
 
@@ -72,7 +72,11 @@ public struct DNSQuestion: Sendable {
 extension DNSQuestion {
     /// Serialize question to DNS wire format:
     /// [QNAME][QTYPE][QCLASS]
+    @available(*, deprecated, renamed: "materialize")
     public func toData() -> Data {
+        materialize()
+    }
+    public func materialize() -> Data {
         var writer = FBPacketBufferWriter()
         writer.name(name)
         writer.writeUInt16(type.rawValue)

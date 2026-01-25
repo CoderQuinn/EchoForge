@@ -39,10 +39,11 @@ let package = Package(
             name: "EchoForgeTests",
             dependencies: [
                 "EchoForge",
+                .product(name: "ForgeLogKit", package: "ForgeLogKit"),
                 .product(name: "ForgeBase", package: "ForgeBase"),
                 .product(name: "NIO", package: "swift-nio"),
             ],
-            path: "Tests/EchoForgeTests",
+            path: "Tests/EchoForgeTests"
         ),
     ]
 )
