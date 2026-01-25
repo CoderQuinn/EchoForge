@@ -37,24 +37,24 @@ public enum EFLog {
 
     #if FORGELOG_DISABLED
     // cache
-    public static func cache(_: String) {}
+    public static func cache(_ m: String) {}
 
     // fake-ip
-    public static func fakeip(_: String) {}
+    public static func fakeip(_ m: String) {}
 
     // upstream
-    public static func upstream(_: String) {}
+    public static func upstream(_ m: String) {}
 
     // core policy
-    public static func core(_: String) {}
+    public static func core(_ m: String) {}
 
-    public static func debug(_: String) {}
+    public static func debug(_ m: String) {}
 
-    public static func info(_: String) {}
+    public static func info(_ m: String) {}
 
-    public static func warn(_: String) {}
+    public static func warn(_ m: String) {}
 
-    public static func error(_: String) {}
+    public static func error(_ m: String) {}
 
     #else
     // cache
