@@ -74,7 +74,7 @@ extension DNSQuestion {
     /// [QNAME][QTYPE][QCLASS]
     @available(*, deprecated, renamed: "materialize")
     public func toData() -> Data {
-        return materialize()
+        materialize()
     }
     public func materialize() -> Data {
         var writer = FBPacketBufferWriter()
