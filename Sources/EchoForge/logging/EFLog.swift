@@ -7,6 +7,7 @@
 //
 
 import ForgeLogKit
+import NIOConcurrencyHelpers
 
 /*
  echodns.core         // DNSService / policy
@@ -23,14 +24,19 @@ public enum EFLog {
         case error = 3
     }
 
-    private static let minimumLevelLock = OSAllocatedUnfairLock(initialState: Level.warn)
+    private static let minimumLevelLock = Lock()
+    nonisolated(unsafe) private static var _minimumLevel: Level = .warn
 
     public static var minimumLevel: Level {
         get {
-            minimumLevelLock.withLock { $0 }
+            minimumLevelLock.withLock {
+                _minimumLevel
+            }
         }
         set {
-            minimumLevelLock.withLock { $0 = newValue }
+            minimumLevelLock.withLock {
+                _minimumLevel = newValue
+            }
         }
     }
     @inline(__always)
@@ -45,24 +51,24 @@ public enum EFLog {
 
     #if FORGELOG_DISABLED
     // cache
-    public static func cache(_: String) {}
+    public static func cache(_ m: String) {}
 
     // fake-ip
-    public static func fakeip(_: String) {}
+    public static func fakeip(_ m: String) {}
 
     // upstream
-    public static func upstream(_: String) {}
+    public static func upstream(_ m: String) {}
 
     // core policy
-    public static func core(_: String) {}
+    public static func core(_ m: String) {}
 
-    public static func debug(_: String) {}
+    public static func debug(_ m: String) {}
 
-    public static func info(_: String) {}
+    public static func info(_ m: String) {}
 
-    public static func warn(_: String) {}
+    public static func warn(_ m: String) {}
 
-    public static func error(_: String) {}
+    public static func error(_ m: String) {}
 
     #else
     // cache
