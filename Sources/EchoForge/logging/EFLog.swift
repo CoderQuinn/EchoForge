@@ -23,8 +23,16 @@ public enum EFLog {
         case error = 3
     }
 
-    public nonisolated(unsafe) static var minimumLevel: Level = .warn
+    private static let minimumLevelLock = OSAllocatedUnfairLock(initialState: Level.warn)
 
+    public static var minimumLevel: Level {
+        get {
+            minimumLevelLock.withLock { $0 }
+        }
+        set {
+            minimumLevelLock.withLock { $0 = newValue }
+        }
+    }
     @inline(__always)
     private static func log(_ category: String) -> FLLog {
         FLLog(category: category)
