@@ -7,8 +7,8 @@
 
 import ForgeBase
 import Foundation
-import NIO
 import Network
+import NIO
 import XCTest
 
 @testable import EchoForge
@@ -109,15 +109,15 @@ final class DNSServiceTests: XCTestCase {
 
         // Build AAAA query manually
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0x1234)  // ID
-        writer.writeUInt16(0x0100)  // Flags: standard query
-        writer.writeUInt16(1)  // QDCOUNT
-        writer.writeUInt16(0)  // ANCOUNT
-        writer.writeUInt16(0)  // NSCOUNT
-        writer.writeUInt16(0)  // ARCOUNT
+        writer.writeUInt16(0x1234) // ID
+        writer.writeUInt16(0x0100) // Flags: standard query
+        writer.writeUInt16(1) // QDCOUNT
+        writer.writeUInt16(0) // ANCOUNT
+        writer.writeUInt16(0) // NSCOUNT
+        writer.writeUInt16(0) // ARCOUNT
         writer.name("ipv6.example.com")
-        writer.writeUInt16(28)  // QTYPE: AAAA
-        writer.writeUInt16(1)  // QCLASS: IN
+        writer.writeUInt16(28) // QTYPE: AAAA
+        writer.writeUInt16(1) // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -174,15 +174,15 @@ final class DNSServiceTests: XCTestCase {
 
             // Build PTR query for a fake IP (e.g., 198.18.0.1 -> 1.0.18.198.in-addr.arpa)
             var writer = FBPacketBufferWriter()
-            writer.writeUInt16(0x5678)  // ID
-            writer.writeUInt16(0x0100)  // Flags
-            writer.writeUInt16(1)  // QDCOUNT
-            writer.writeUInt16(0)  // ANCOUNT
-            writer.writeUInt16(0)  // NSCOUNT
-            writer.writeUInt16(0)  // ARCOUNT
+            writer.writeUInt16(0x5678) // ID
+            writer.writeUInt16(0x0100) // Flags
+            writer.writeUInt16(1) // QDCOUNT
+            writer.writeUInt16(0) // ANCOUNT
+            writer.writeUInt16(0) // NSCOUNT
+            writer.writeUInt16(0) // ARCOUNT
             writer.name("1.0.18.198.in-addr.arpa")
-            writer.writeUInt16(12)  // QTYPE: PTR
-            writer.writeUInt16(1)  // QCLASS: IN
+            writer.writeUInt16(12) // QTYPE: PTR
+            writer.writeUInt16(1) // QCLASS: IN
 
             let ptrQueryData = writer.data
             let ptrBuffer = FBDataPacketBuffer(ptrQueryData)
@@ -214,15 +214,15 @@ final class DNSServiceTests: XCTestCase {
 
         // Build PTR query for a non-fake IP (e.g., 8.8.8.8)
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0x9ABC)  // ID
-        writer.writeUInt16(0x0100)  // Flags
-        writer.writeUInt16(1)  // QDCOUNT
-        writer.writeUInt16(0)  // ANCOUNT
-        writer.writeUInt16(0)  // NSCOUNT
-        writer.writeUInt16(0)  // ARCOUNT
+        writer.writeUInt16(0x9ABC) // ID
+        writer.writeUInt16(0x0100) // Flags
+        writer.writeUInt16(1) // QDCOUNT
+        writer.writeUInt16(0) // ANCOUNT
+        writer.writeUInt16(0) // NSCOUNT
+        writer.writeUInt16(0) // ARCOUNT
         writer.name("8.8.8.8.in-addr.arpa")
-        writer.writeUInt16(12)  // QTYPE: PTR
-        writer.writeUInt16(1)  // QCLASS: IN
+        writer.writeUInt16(12) // QTYPE: PTR
+        writer.writeUInt16(1) // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -245,21 +245,21 @@ final class DNSServiceTests: XCTestCase {
             eventLoop: loop,
             ttl: 300,
             upstreamHost: "127.0.0.1",
-            upstreamPort: 19999  // Unlikely to be in use
+            upstreamPort: 19999 // Unlikely to be in use
         )
         let exp = expectation(description: "Upstream forwarding")
 
         // Build a TXT query (not handled locally, should forward)
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0xDEF0)  // ID
-        writer.writeUInt16(0x0100)  // Flags
-        writer.writeUInt16(1)  // QDCOUNT
-        writer.writeUInt16(0)  // ANCOUNT
-        writer.writeUInt16(0)  // NSCOUNT
-        writer.writeUInt16(0)  // ARCOUNT
+        writer.writeUInt16(0xDEF0) // ID
+        writer.writeUInt16(0x0100) // Flags
+        writer.writeUInt16(1) // QDCOUNT
+        writer.writeUInt16(0) // ANCOUNT
+        writer.writeUInt16(0) // NSCOUNT
+        writer.writeUInt16(0) // ARCOUNT
         writer.name("upstream.test.com")
-        writer.writeUInt16(16)  // QTYPE: TXT
-        writer.writeUInt16(1)  // QCLASS: IN
+        writer.writeUInt16(16) // QTYPE: TXT
+        writer.writeUInt16(1) // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -307,15 +307,15 @@ final class DNSServiceTests: XCTestCase {
 
         // Build MX query (should be passed through)
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0x1122)  // ID
-        writer.writeUInt16(0x0100)  // Flags
-        writer.writeUInt16(1)  // QDCOUNT
-        writer.writeUInt16(0)  // ANCOUNT
-        writer.writeUInt16(0)  // NSCOUNT
-        writer.writeUInt16(0)  // ARCOUNT
+        writer.writeUInt16(0x1122) // ID
+        writer.writeUInt16(0x0100) // Flags
+        writer.writeUInt16(1) // QDCOUNT
+        writer.writeUInt16(0) // ANCOUNT
+        writer.writeUInt16(0) // NSCOUNT
+        writer.writeUInt16(0) // ARCOUNT
         writer.name("mail.example.com")
-        writer.writeUInt16(15)  // QTYPE: MX
-        writer.writeUInt16(1)  // QCLASS: IN
+        writer.writeUInt16(15) // QTYPE: MX
+        writer.writeUInt16(1) // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -358,15 +358,15 @@ final class DNSServiceTests: XCTestCase {
         // Query with compression pointers should fall to slow path
         // For this test, we'll use a standard query but verify it works
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0x3344)  // ID
-        writer.writeUInt16(0x0100)  // Flags
-        writer.writeUInt16(1)  // QDCOUNT
-        writer.writeUInt16(0)  // ANCOUNT
-        writer.writeUInt16(0)  // NSCOUNT
-        writer.writeUInt16(0)  // ARCOUNT
+        writer.writeUInt16(0x3344) // ID
+        writer.writeUInt16(0x0100) // Flags
+        writer.writeUInt16(1) // QDCOUNT
+        writer.writeUInt16(0) // ANCOUNT
+        writer.writeUInt16(0) // NSCOUNT
+        writer.writeUInt16(0) // ARCOUNT
         writer.name("slow.path.example.com")
-        writer.writeUInt16(1)  // QTYPE: A
-        writer.writeUInt16(1)  // QCLASS: IN
+        writer.writeUInt16(1) // QTYPE: A
+        writer.writeUInt16(1) // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -389,7 +389,7 @@ final class DNSServiceTests: XCTestCase {
         let exp = expectation(description: "Malformed query handling")
 
         // Create a truncated/malformed DNS query
-        let malformedData = Data([0x12, 0x34, 0x01, 0x00, 0x00, 0x01])  // Too short
+        let malformedData = Data([0x12, 0x34, 0x01, 0x00, 0x00, 0x01]) // Too short
         let buffer = FBDataPacketBuffer(malformedData)
 
         service.handleDNSPayload(buffer, loop).whenComplete { _ in
@@ -440,7 +440,7 @@ final class DNSServiceTests: XCTestCase {
         wait(for: [exp1], timeout: 2.0)
 
         // Now test dial decision for a fake IP
-        let fakeIP = IPv4Address("198.18.0.2")!  // Typical fake IP range
+        let fakeIP = IPv4Address("198.18.0.2")! // Typical fake IP range
 
         service.resolveDialDecision(fakeIP, loop).whenComplete { result in
             switch result {
@@ -460,7 +460,7 @@ final class DNSServiceTests: XCTestCase {
     // MARK: - Sweep Task Tests
 
     func testSweepTaskStartStop() {
-        let service = DNSService(eventLoop: loop, ttl: 10)  // Short TTL for test
+        let service = DNSService(eventLoop: loop, ttl: 10) // Short TTL for test
         let exp = expectation(description: "Sweep task lifecycle")
 
         service.startSweep()
@@ -475,7 +475,7 @@ final class DNSServiceTests: XCTestCase {
     }
 
     func testSweepTaskCleansExpiredEntries() {
-        let service = DNSService(eventLoop: loop, ttl: 1)  // Very short TTL
+        let service = DNSService(eventLoop: loop, ttl: 1) // Very short TTL
         let exp1 = expectation(description: "Create entry")
         let exp2 = expectation(description: "Entry should expire")
 
@@ -549,15 +549,15 @@ final class DNSServiceTests: XCTestCase {
 
         // Build query with empty domain (just root label)
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0xABCD)  // ID
-        writer.writeUInt16(0x0100)  // Flags
-        writer.writeUInt16(1)  // QDCOUNT
-        writer.writeUInt16(0)  // ANCOUNT
-        writer.writeUInt16(0)  // NSCOUNT
-        writer.writeUInt16(0)  // ARCOUNT
-        writer.writeUInt8(0)  // Empty domain (root)
-        writer.writeUInt16(1)  // QTYPE: A
-        writer.writeUInt16(1)  // QCLASS: IN
+        writer.writeUInt16(0xABCD) // ID
+        writer.writeUInt16(0x0100) // Flags
+        writer.writeUInt16(1) // QDCOUNT
+        writer.writeUInt16(0) // ANCOUNT
+        writer.writeUInt16(0) // NSCOUNT
+        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt8(0) // Empty domain (root)
+        writer.writeUInt16(1) // QTYPE: A
+        writer.writeUInt16(1) // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -577,7 +577,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 
@@ -622,7 +622,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 
@@ -677,7 +677,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 

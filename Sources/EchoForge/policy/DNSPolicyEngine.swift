@@ -8,9 +8,9 @@
 import ForgeBase
 
 public enum DNSPolicyDecision {
-    case handleLocally  // A / AAAA / PTR(fake)
-    case passthrough  // Valid but unsupported → sent upstream
-    case refuse(DNSReturnStatus)  // Invalid or explicitly refused
+    case handleLocally // A / AAAA / PTR(fake)
+    case passthrough // Valid but unsupported → sent upstream
+    case refuse(DNSReturnStatus) // Invalid or explicitly refused
 }
 
 public enum DNSPolicyEngine {
@@ -23,13 +23,16 @@ public enum DNSPolicyEngine {
     ///
     static func decide(_ fast: SniffedDNSQuery?) -> DNSPolicyDecision {
         guard let fast = fast else {
+            EFLog.debug("policy decide: fast=nil -> handleLocally")
             return .handleLocally
         }
 
         switch fast.qtype {
         case .a, .aaaa, .ptr:
+            EFLog.debug("policy decide: qtype=\(fast.qtype) -> handleLocally")
             return .handleLocally
         default:
+            EFLog.debug("policy decide: qtype=\(fast.qtype) -> passthrough")
             return .passthrough
         }
     }

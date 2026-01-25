@@ -39,6 +39,9 @@ final class DNSUpstreamBreaker: DNSBreaker {
     /// Call on any successful upstream response
     func onSuccess() {
         failureStreak = 0
+        if degradedUntil != nil {
+            EFLog.info("upstream breaker recovered")
+        }
         degradedUntil = nil
     }
 
@@ -49,6 +52,7 @@ final class DNSUpstreamBreaker: DNSBreaker {
         if failureStreak >= failThreshold {
             degradedUntil = NIODeadline.now() + degradeDuration
             failureStreak = 0
+            EFLog.warn("upstream breaker degraded for \(degradeDuration)")
         }
     }
 }

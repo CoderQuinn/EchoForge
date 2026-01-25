@@ -11,7 +11,6 @@ import XCTest
 @testable import EchoForge
 
 final class DNSUpstreamBreakerTests: XCTestCase {
-
     // MARK: - Basic Behavior Tests
 
     func testAllowRequestWhenNotDegraded() {
@@ -63,7 +62,7 @@ final class DNSUpstreamBreakerTests: XCTestCase {
         let breaker = DNSUpstreamBreaker(failThreshold: 5, degradeDuration: .seconds(10))
 
         // Record 4 failures (below threshold of 5)
-        for _ in 0..<4 {
+        for _ in 0 ..< 4 {
             breaker.onFailure()
         }
         XCTAssertTrue(breaker.allowRequest(), "Breaker should allow after 4 failures (threshold 5)")
@@ -141,7 +140,7 @@ final class DNSUpstreamBreakerTests: XCTestCase {
     // MARK: - Degradation Period Tests
 
     func testDegradationPeriodDuration() {
-        let degradeDuration: Int64 = 2  // 2 seconds
+        let degradeDuration: Int64 = 2 // 2 seconds
         let breaker = DNSUpstreamBreaker(
             failThreshold: 2,
             degradeDuration: .seconds(degradeDuration)
