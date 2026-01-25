@@ -72,6 +72,10 @@ public struct DNSQuestion: Sendable {
 extension DNSQuestion {
     /// Serialize question to DNS wire format:
     /// [QNAME][QTYPE][QCLASS]
+    @available(*, deprecated, renamed: "materialize")
+    public func toData() -> Data {
+        return materialize()
+    }
     public func materialize() -> Data {
         var writer = FBPacketBufferWriter()
         writer.name(name)
