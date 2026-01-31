@@ -69,7 +69,7 @@ let loop = group.next()
 let service = DNSService(eventLoop: loop)
 service.startSweep() // optional: enable periodic cache sweep
 
-// Handle an incoming DNS UDP payload (Data) on any loop
+// Handle an incoming DNS UDP payload (can be called from any EventLoop)
 // FBDataPacketBuffer is provided by ForgeBase
 let incoming: Data = /* UDP payload */ Data()
 let buf = FBDataPacketBuffer(incoming)

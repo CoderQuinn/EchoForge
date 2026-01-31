@@ -38,7 +38,7 @@ public final class DNSUpstreamUDPRelay: DNSUpstream, @unchecked Sendable {
 
     private var nextID: UInt16 = 1
     private var pendingMap: [UInt16: PendingQuery] = [:]
-    private let maxPending: Int = 16384
+    private let maxPending: Int = 4096
 
     public init(eventLoop: EventLoop, upstream: Upstream) {
         self.eventLoop = eventLoop
