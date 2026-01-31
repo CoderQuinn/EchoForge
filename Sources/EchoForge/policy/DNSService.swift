@@ -24,8 +24,8 @@
 
 import ForgeBase
 import Foundation
-import NIO
 import Network
+import NIO
 
 public struct DialDecision {
     public let dialIP: IPv4Address?
@@ -93,7 +93,7 @@ public final class DNSService: @unchecked Sendable {
         switch decision {
         case .handleLocally:
             return handleSlow(buffer: buffer, fast: fast)
-        case .refuse(let rcode):
+        case let .refuse(rcode):
             if fast == nil {
                 return handleSlow(buffer: buffer, fast: fast)
             }
@@ -207,7 +207,7 @@ public final class DNSService: @unchecked Sendable {
         eventLoop.assertInEventLoop()
 
         if let v4 = parseInAddrArpa(query.question.name), ipPool.isFakeIP(v4),
-            let domain = ipPool.reverseLookup(v4)
+           let domain = ipPool.reverseLookup(v4)
         {
             let resp = DNSMessageBuilder.builePTRResponse(
                 query: query,
@@ -309,7 +309,7 @@ public final class DNSService: @unchecked Sendable {
             self.eventLoop.execute {
                 self.inflightPrefetch.remove(domain)
                 switch result {
-                case .success(let resp):
+                case let .success(resp):
                     self.onPrefetchAResult(domain: domain, response: resp)
                 case .failure:
                     self.prefetchCooldownUntils[domain] = .now() + self.prefetchCooldown
@@ -395,7 +395,7 @@ public final class DNSService: @unchecked Sendable {
 
         return
             FBIPv4Parse
-            .parseDottedDecimal(Substring(reversed))?
-            .asNetworkIPv4Address
+                .parseDottedDecimal(Substring(reversed))?
+                .asNetworkIPv4Address
     }
 }
