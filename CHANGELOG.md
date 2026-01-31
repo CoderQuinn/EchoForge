@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+##[0.5.0] - 2026-02-01
+
+### Added
+- Multi-upstream DNS with hedge query support.
+- Overall upstream timeout to guarantee DNS queries always complete.
+- Explicit upstream inflight limit to prevent DNS eventLoop overload.
+
+### Changed
+- DNS upstream handling is now strictly bounded (no unbounded pending).
+- Upstream breaker treats slow responses as failures for faster degradation.
+- DNS logic simplified back to a single eventLoop model.
+- Fixed eventLoop ownership bugs in DNSService.handleDNSPayload.
+- Upstream inflight accounting made deterministic via whenComplete.
+
 ## [0.4.0] - 2026-01-22
 ### Added
 - Prefetch in-flight tracking and cooldown protection.
