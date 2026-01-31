@@ -16,14 +16,14 @@ public enum DNSMessageBuilder {
     public static func buildAQuery(domain: String) -> Data {
         EFLog.debug("build A query domain=\(domain)")
         var writer = FBPacketBufferWriter()
-        let id = UInt16.random(in: 1 ... UInt16.max)
+        let id = UInt16.random(in: 1...UInt16.max)
 
         // flags: RD=1
         let flags: UInt16 = 0x0100
 
         writer.writeUInt16(id)
         writer.writeUInt16(flags)
-        writer.writeUInt16(1) // QD
+        writer.writeUInt16(1)  // QD
         writer.writeUInt16(0)
         writer.writeUInt16(0)
         writer.writeUInt16(0)
@@ -41,30 +41,30 @@ public enum DNSMessageBuilder {
         EFLog.debug("build A response domain=\(query.question.name) ttl=\(ttl)")
         var writer = FBPacketBufferWriter()
         let flags: UInt16 =
-            0x8000 // QR = 1 (response)
-            | 0x0400 // AA = 1
-            | 0x0080 // RA = 1
-            | 0x0000 // RCODE = 0
+            0x8000  // QR = 1 (response)
+            | 0x0400  // AA = 1
+            | 0x0080  // RA = 1
+            | 0x0000  // RCODE = 0
 
-        writer.writeUInt16(query.header.id) // ID
-        writer.writeUInt16(flags) // Flags
-        writer.writeUInt16(1) // QDCOUNT
-        writer.writeUInt16(1) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(query.header.id)  // ID
+        writer.writeUInt16(flags)  // Flags
+        writer.writeUInt16(1)  // QDCOUNT
+        writer.writeUInt16(1)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
 
         let nameOffset = writer.position
         writer.name(query.question.name)
-        writer.writeUInt16(DNSType.a.rawValue) // QUESTION TYPE stays as requested name; ok
+        writer.writeUInt16(DNSType.a.rawValue)  // QUESTION TYPE stays as requested name; ok
         writer.writeUInt16(DNSClass.internet.rawValue)
 
         // Answer NAME pointer to question name
         writer.pointer(to: nameOffset)
-        writer.writeUInt16(DNSType.a.rawValue) // QUESTION TYPE stays as requested name; ok
+        writer.writeUInt16(DNSType.a.rawValue)  // QUESTION TYPE stays as requested name; ok
         writer.writeUInt16(DNSClass.internet.rawValue)
-        writer.writeUInt32(ttl) // TTL
-        writer.writeUInt16(4) // RDLENGTH
-        writer.raw(fakeIPv4.rawValue) // RDATA
+        writer.writeUInt32(ttl)  // TTL
+        writer.writeUInt16(4)  // RDLENGTH
+        writer.raw(fakeIPv4.rawValue)  // RDATA
 
         return writer.data
     }
@@ -74,28 +74,28 @@ public enum DNSMessageBuilder {
         EFLog.debug("build PTR response domain=\(query.question.name) ttl=\(ttl)")
         var writer = FBPacketBufferWriter()
         let flags: UInt16 =
-            0x8000 // QR = 1 (response)
-            | 0x0400 // AA = 1
-            | 0x0080 // RA = 1
-            | 0x0000 // RCODE = 0
+            0x8000  // QR = 1 (response)
+            | 0x0400  // AA = 1
+            | 0x0080  // RA = 1
+            | 0x0000  // RCODE = 0
 
-        writer.writeUInt16(query.header.id) // ID
-        writer.writeUInt16(flags) // Flags
-        writer.writeUInt16(1) // QDCOUNT
-        writer.writeUInt16(1) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(query.header.id)  // ID
+        writer.writeUInt16(flags)  // Flags
+        writer.writeUInt16(1)  // QDCOUNT
+        writer.writeUInt16(1)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
 
         let nameOffset = writer.position
         writer.name(query.question.name)
-        writer.writeUInt16(DNSType.ptr.rawValue) // QUESTION TYPE stays as requested
+        writer.writeUInt16(DNSType.ptr.rawValue)  // QUESTION TYPE stays as requested
         writer.writeUInt16(DNSClass.internet.rawValue)
 
         // Answer NAME pointer to question name
         writer.pointer(to: nameOffset)
-        writer.writeUInt16(DNSType.ptr.rawValue) // TYPE
-        writer.writeUInt16(DNSClass.internet.rawValue) // CLASS
-        writer.writeUInt32(ttl) // TTL
+        writer.writeUInt16(DNSType.ptr.rawValue)  // TYPE
+        writer.writeUInt16(DNSClass.internet.rawValue)  // CLASS
+        writer.writeUInt32(ttl)  // TTL
 
         // RDLENGTH and RDATA
         let rdlenPos = writer.reserve16()
@@ -122,16 +122,16 @@ public enum DNSMessageBuilder {
         EFLog.debug("build refuse response id=\(id) rcode=\(rcode)")
         var writer = FBPacketBufferWriter()
         let flags: UInt16 =
-            0x8000 // QR = 1 (response)
-            | 0x0080 // RA = 1
-            | UInt16(rcode.rawValue) // RCODE
+            0x8000  // QR = 1 (response)
+            | 0x0080  // RA = 1
+            | UInt16(rcode.rawValue)  // RCODE
 
-        writer.writeUInt16(id) // ID
-        writer.writeUInt16(flags) // Flags
-        writer.writeUInt16(originalQuestion.isEmpty ? 0 : 1) // QDCOUNT
-        writer.writeUInt16(0) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(id)  // ID
+        writer.writeUInt16(flags)  // Flags
+        writer.writeUInt16(originalQuestion.isEmpty ? 0 : 1)  // QDCOUNT
+        writer.writeUInt16(0)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
 
         if !originalQuestion.isEmpty {
             writer.raw(originalQuestion)

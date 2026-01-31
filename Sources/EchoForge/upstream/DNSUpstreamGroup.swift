@@ -58,7 +58,7 @@ final class DNSUpstreamGroup {
 
                     let rtt = NIODeadline.now() - start
                     switch result {
-                    case let .success(data):
+                    case .success(let data):
                         finished = true
                         overallTimeout.cancel()
                         if rtt > self.slowUpstreamDeadline {
