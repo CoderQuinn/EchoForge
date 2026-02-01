@@ -7,8 +7,8 @@
 
 import ForgeBase
 import Foundation
-import Network
 import NIO
+import Network
 import XCTest
 
 @testable import EchoForge
@@ -39,7 +39,7 @@ final class DNSServiceTests: XCTestCase {
 
         service.handleDNSPayload(buffer, loop).whenComplete { result in
             switch result {
-            case let .success(responseData):
+            case .success(let responseData):
                 XCTAssertNotNil(responseData, "Response should not be nil")
                 if let data = responseData {
                     // Verify it's a valid DNS response
@@ -54,7 +54,7 @@ final class DNSServiceTests: XCTestCase {
                     XCTAssertTrue((flags & 0x8000) != 0, "QR bit should be set in response")
                 }
                 exp.fulfill()
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Query failed: \(error)")
             }
         }
@@ -74,7 +74,7 @@ final class DNSServiceTests: XCTestCase {
 
         // First query - cache miss
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
-            if case let .success(data) = result {
+            if case .success(let data) = result {
                 firstResponseData = data
             }
             exp1.fulfill()
@@ -86,14 +86,14 @@ final class DNSServiceTests: XCTestCase {
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
             switch result {
-            case let .success(responseData):
+            case .success(let responseData):
                 XCTAssertNotNil(responseData)
                 // Both responses should return the same fake IP
                 let count1 = responseData?.count ?? 0
                 let count2 = firstResponseData?.count ?? 1
                 XCTAssertEqual(count1, count2)
                 exp2.fulfill()
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Second query failed: \(error)")
             }
         }
@@ -109,22 +109,22 @@ final class DNSServiceTests: XCTestCase {
 
         // Build AAAA query manually
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0x1234) // ID
-        writer.writeUInt16(0x0100) // Flags: standard query
-        writer.writeUInt16(1) // QDCOUNT
-        writer.writeUInt16(0) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(0x1234)  // ID
+        writer.writeUInt16(0x0100)  // Flags: standard query
+        writer.writeUInt16(1)  // QDCOUNT
+        writer.writeUInt16(0)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
         writer.name("ipv6.example.com")
-        writer.writeUInt16(28) // QTYPE: AAAA
-        writer.writeUInt16(1) // QCLASS: IN
+        writer.writeUInt16(28)  // QTYPE: AAAA
+        writer.writeUInt16(1)  // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
 
         service.handleDNSPayload(buffer, loop).whenComplete { result in
             switch result {
-            case let .success(responseData):
+            case .success(let responseData):
                 XCTAssertNotNil(responseData)
                 if let data = responseData {
                     // Should get a response with no answers (AAAA not supported)
@@ -135,7 +135,7 @@ final class DNSServiceTests: XCTestCase {
                     XCTAssertEqual(anCount, 0, "AAAA query should return no answers")
                 }
                 exp.fulfill()
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("AAAA query failed: \(error)")
             }
         }
@@ -158,7 +158,7 @@ final class DNSServiceTests: XCTestCase {
 
         // First, make an A query to get a fake IP assigned
         service.handleDNSPayload(buffer, loop).whenComplete { result in
-            if case let .success(data) = result {
+            if case .success(let data) = result {
                 fakeIPResponse = data
             }
             exp1.fulfill()
@@ -174,22 +174,22 @@ final class DNSServiceTests: XCTestCase {
 
             // Build PTR query for a fake IP (e.g., 198.18.0.1 -> 1.0.18.198.in-addr.arpa)
             var writer = FBPacketBufferWriter()
-            writer.writeUInt16(0x5678) // ID
-            writer.writeUInt16(0x0100) // Flags
-            writer.writeUInt16(1) // QDCOUNT
-            writer.writeUInt16(0) // ANCOUNT
-            writer.writeUInt16(0) // NSCOUNT
-            writer.writeUInt16(0) // ARCOUNT
+            writer.writeUInt16(0x5678)  // ID
+            writer.writeUInt16(0x0100)  // Flags
+            writer.writeUInt16(1)  // QDCOUNT
+            writer.writeUInt16(0)  // ANCOUNT
+            writer.writeUInt16(0)  // NSCOUNT
+            writer.writeUInt16(0)  // ARCOUNT
             writer.name("1.0.18.198.in-addr.arpa")
-            writer.writeUInt16(12) // QTYPE: PTR
-            writer.writeUInt16(1) // QCLASS: IN
+            writer.writeUInt16(12)  // QTYPE: PTR
+            writer.writeUInt16(1)  // QCLASS: IN
 
             let ptrQueryData = writer.data
             let ptrBuffer = FBDataPacketBuffer(ptrQueryData)
 
             service.handleDNSPayload(ptrBuffer, loop).whenComplete { result in
                 switch result {
-                case let .success(responseData):
+                case .success(let responseData):
                     XCTAssertNotNil(responseData)
                     if let data = responseData {
                         XCTAssertGreaterThanOrEqual(data.count, 12)
@@ -197,7 +197,7 @@ final class DNSServiceTests: XCTestCase {
                         // or be forwarded upstream if not
                     }
                     exp2.fulfill()
-                case let .failure(error):
+                case .failure(let error):
                     XCTFail("PTR query failed: \(error)")
                 }
             }
@@ -214,15 +214,15 @@ final class DNSServiceTests: XCTestCase {
 
         // Build PTR query for a non-fake IP (e.g., 8.8.8.8)
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0x9ABC) // ID
-        writer.writeUInt16(0x0100) // Flags
-        writer.writeUInt16(1) // QDCOUNT
-        writer.writeUInt16(0) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(0x9ABC)  // ID
+        writer.writeUInt16(0x0100)  // Flags
+        writer.writeUInt16(1)  // QDCOUNT
+        writer.writeUInt16(0)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
         writer.name("8.8.8.8.in-addr.arpa")
-        writer.writeUInt16(12) // QTYPE: PTR
-        writer.writeUInt16(1) // QCLASS: IN
+        writer.writeUInt16(12)  // QTYPE: PTR
+        writer.writeUInt16(1)  // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -245,21 +245,21 @@ final class DNSServiceTests: XCTestCase {
             eventLoop: loop,
             ttl: 300,
             upstreamHost: "127.0.0.1",
-            upstreamPort: 19999 // Unlikely to be in use
+            upstreamPort: 19999  // Unlikely to be in use
         )
         let exp = expectation(description: "Upstream forwarding")
 
         // Build a TXT query (not handled locally, should forward)
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0xDEF0) // ID
-        writer.writeUInt16(0x0100) // Flags
-        writer.writeUInt16(1) // QDCOUNT
-        writer.writeUInt16(0) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(0xDEF0)  // ID
+        writer.writeUInt16(0x0100)  // Flags
+        writer.writeUInt16(1)  // QDCOUNT
+        writer.writeUInt16(0)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
         writer.name("upstream.test.com")
-        writer.writeUInt16(16) // QTYPE: TXT
-        writer.writeUInt16(1) // QCLASS: IN
+        writer.writeUInt16(16)  // QTYPE: TXT
+        writer.writeUInt16(1)  // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -284,7 +284,7 @@ final class DNSServiceTests: XCTestCase {
 
         service.handleDNSPayload(buffer, loop).whenComplete { result in
             switch result {
-            case let .success(responseData):
+            case .success(let responseData):
                 XCTAssertNotNil(responseData)
                 // A query should be handled locally, not forwarded
                 if let data = responseData {
@@ -293,7 +293,7 @@ final class DNSServiceTests: XCTestCase {
                     XCTAssertGreaterThan(anCount, 0, "A query should have an answer")
                 }
                 exp.fulfill()
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Local query failed: \(error)")
             }
         }
@@ -307,15 +307,15 @@ final class DNSServiceTests: XCTestCase {
 
         // Build MX query (should be passed through)
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0x1122) // ID
-        writer.writeUInt16(0x0100) // Flags
-        writer.writeUInt16(1) // QDCOUNT
-        writer.writeUInt16(0) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(0x1122)  // ID
+        writer.writeUInt16(0x0100)  // Flags
+        writer.writeUInt16(1)  // QDCOUNT
+        writer.writeUInt16(0)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
         writer.name("mail.example.com")
-        writer.writeUInt16(15) // QTYPE: MX
-        writer.writeUInt16(1) // QCLASS: IN
+        writer.writeUInt16(15)  // QTYPE: MX
+        writer.writeUInt16(1)  // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -340,10 +340,10 @@ final class DNSServiceTests: XCTestCase {
 
         service.handleDNSPayload(buffer, loop).whenComplete { result in
             switch result {
-            case let .success(responseData):
+            case .success(let responseData):
                 XCTAssertNotNil(responseData)
                 exp.fulfill()
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Fast path query failed: \(error)")
             }
         }
@@ -358,25 +358,25 @@ final class DNSServiceTests: XCTestCase {
         // Query with compression pointers should fall to slow path
         // For this test, we'll use a standard query but verify it works
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0x3344) // ID
-        writer.writeUInt16(0x0100) // Flags
-        writer.writeUInt16(1) // QDCOUNT
-        writer.writeUInt16(0) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
+        writer.writeUInt16(0x3344)  // ID
+        writer.writeUInt16(0x0100)  // Flags
+        writer.writeUInt16(1)  // QDCOUNT
+        writer.writeUInt16(0)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
         writer.name("slow.path.example.com")
-        writer.writeUInt16(1) // QTYPE: A
-        writer.writeUInt16(1) // QCLASS: IN
+        writer.writeUInt16(1)  // QTYPE: A
+        writer.writeUInt16(1)  // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
 
         service.handleDNSPayload(buffer, loop).whenComplete { result in
             switch result {
-            case let .success(responseData):
+            case .success(let responseData):
                 XCTAssertNotNil(responseData)
                 exp.fulfill()
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Slow path query failed: \(error)")
             }
         }
@@ -389,7 +389,7 @@ final class DNSServiceTests: XCTestCase {
         let exp = expectation(description: "Malformed query handling")
 
         // Create a truncated/malformed DNS query
-        let malformedData = Data([0x12, 0x34, 0x01, 0x00, 0x00, 0x01]) // Too short
+        let malformedData = Data([0x12, 0x34, 0x01, 0x00, 0x00, 0x01])  // Too short
         let buffer = FBDataPacketBuffer(malformedData)
 
         service.handleDNSPayload(buffer, loop).whenComplete { _ in
@@ -410,12 +410,12 @@ final class DNSServiceTests: XCTestCase {
 
         service.resolveDialDecision(realIP, loop).whenComplete { result in
             switch result {
-            case let .success(decision):
+            case .success(let decision):
                 XCTAssertEqual(decision.dialIP, realIP)
                 XCTAssertNil(decision.dialHost)
                 XCTAssertFalse(decision.fromFakeIP)
                 exp.fulfill()
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Dial decision failed: \(error)")
             }
         }
@@ -440,16 +440,16 @@ final class DNSServiceTests: XCTestCase {
         wait(for: [exp1], timeout: 2.0)
 
         // Now test dial decision for a fake IP
-        let fakeIP = IPv4Address("198.18.0.2")! // Typical fake IP range
+        let fakeIP = IPv4Address("198.18.0.2")!  // Typical fake IP range
 
         service.resolveDialDecision(fakeIP, loop).whenComplete { result in
             switch result {
-            case let .success(decision):
+            case .success(let decision):
                 // Should recognize it as fake IP
                 XCTAssertTrue(decision.fromFakeIP)
                 // Might have dialHost or dialIP depending on cache state
                 exp2.fulfill()
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Dial decision failed: \(error)")
             }
         }
@@ -460,7 +460,7 @@ final class DNSServiceTests: XCTestCase {
     // MARK: - Sweep Task Tests
 
     func testSweepTaskStartStop() {
-        let service = DNSService(eventLoop: loop, ttl: 10) // Short TTL for test
+        let service = DNSService(eventLoop: loop, ttl: 10)  // Short TTL for test
         let exp = expectation(description: "Sweep task lifecycle")
 
         service.startSweep()
@@ -475,7 +475,7 @@ final class DNSServiceTests: XCTestCase {
     }
 
     func testSweepTaskCleansExpiredEntries() {
-        let service = DNSService(eventLoop: loop, ttl: 1) // Very short TTL
+        let service = DNSService(eventLoop: loop, ttl: 1)  // Very short TTL
         let exp1 = expectation(description: "Create entry")
         let exp2 = expectation(description: "Entry should expire")
 
@@ -486,7 +486,7 @@ final class DNSServiceTests: XCTestCase {
 
         // Create an entry
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
-            if case let .success(data) = result {
+            if case .success(let data) = result {
                 firstResponse = data
             }
             exp1.fulfill()
@@ -506,7 +506,7 @@ final class DNSServiceTests: XCTestCase {
                 // This is a new query after expiration
                 // Can't easily verify cache miss vs hit without internal access
                 // but at least verify it still works
-                if case let .success(data) = result {
+                if case .success(let data) = result {
                     XCTAssertNotNil(data)
                 }
                 exp2.fulfill()
@@ -549,15 +549,15 @@ final class DNSServiceTests: XCTestCase {
 
         // Build query with empty domain (just root label)
         var writer = FBPacketBufferWriter()
-        writer.writeUInt16(0xABCD) // ID
-        writer.writeUInt16(0x0100) // Flags
-        writer.writeUInt16(1) // QDCOUNT
-        writer.writeUInt16(0) // ANCOUNT
-        writer.writeUInt16(0) // NSCOUNT
-        writer.writeUInt16(0) // ARCOUNT
-        writer.writeUInt8(0) // Empty domain (root)
-        writer.writeUInt16(1) // QTYPE: A
-        writer.writeUInt16(1) // QCLASS: IN
+        writer.writeUInt16(0xABCD)  // ID
+        writer.writeUInt16(0x0100)  // Flags
+        writer.writeUInt16(1)  // QDCOUNT
+        writer.writeUInt16(0)  // ANCOUNT
+        writer.writeUInt16(0)  // NSCOUNT
+        writer.writeUInt16(0)  // ARCOUNT
+        writer.writeUInt8(0)  // Empty domain (root)
+        writer.writeUInt16(1)  // QTYPE: A
+        writer.writeUInt16(1)  // QCLASS: IN
 
         let queryData = writer.data
         let buffer = FBDataPacketBuffer(queryData)
@@ -577,7 +577,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 
@@ -591,9 +591,9 @@ final class DNSServiceTests: XCTestCase {
         let buffer1 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data, "First query should succeed")
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("First query failed: \(error)")
             }
             exp1.fulfill()
@@ -604,9 +604,9 @@ final class DNSServiceTests: XCTestCase {
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data, "Second query should succeed")
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Second query failed: \(error)")
             }
             exp2.fulfill()
@@ -622,7 +622,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 
@@ -637,9 +637,9 @@ final class DNSServiceTests: XCTestCase {
         let buffer1 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data, "First query should return fake IP")
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("First query failed: \(error)")
             }
             exp1.fulfill()
@@ -660,9 +660,9 @@ final class DNSServiceTests: XCTestCase {
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data, "Second query should still return fake IP")
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Second query failed: \(error)")
             }
             exp3.fulfill()
@@ -677,7 +677,7 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
+            upstreamHost: "192.0.2.1",  // RFC 5737 TEST-NET-1, unreachable
             upstreamPort: 53
         )
 
@@ -693,9 +693,9 @@ final class DNSServiceTests: XCTestCase {
         let buffer1 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data)
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Query 1 failed: \(error)")
             }
             exp1.fulfill()
@@ -704,9 +704,9 @@ final class DNSServiceTests: XCTestCase {
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data)
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Query 2 failed: \(error)")
             }
             exp2.fulfill()
@@ -715,9 +715,9 @@ final class DNSServiceTests: XCTestCase {
         let buffer3 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer3, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data)
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Query 3 failed: \(error)")
             }
             exp3.fulfill()
@@ -740,9 +740,9 @@ final class DNSServiceTests: XCTestCase {
         // First query to assign fake IP
         service.handleDNSPayload(buffer, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data)
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("First query failed: \(error)")
             }
             exp1.fulfill()
@@ -756,9 +756,9 @@ final class DNSServiceTests: XCTestCase {
         let buffer2 = FBDataPacketBuffer(queryData)
         service.handleDNSPayload(buffer2, loop).whenComplete { result in
             switch result {
-            case let .success(data):
+            case .success(let data):
                 XCTAssertNotNil(data)
-            case let .failure(error):
+            case .failure(let error):
                 XCTFail("Second query failed: \(error)")
             }
             exp2.fulfill()

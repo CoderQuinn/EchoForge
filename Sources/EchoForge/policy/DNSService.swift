@@ -24,8 +24,8 @@
 
 import ForgeBase
 import Foundation
-import Network
 import NIO
+import Network
 
 public struct DialDecision {
     public let dialIP: IPv4Address?
@@ -334,7 +334,7 @@ public final class DNSService: @unchecked Sendable {
             self.eventLoop.execute {
                 self.inflightPrefetch.remove(domain)
                 switch result {
-                case let .success(resp):
+                case .success(let resp):
                     self.onPrefetchAResult(domain: domain, response: resp)
                 case .failure:
                     self.prefetchCooldownUntils[domain] = .now() + self.prefetchCooldown
