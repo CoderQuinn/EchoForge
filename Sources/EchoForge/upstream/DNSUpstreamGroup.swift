@@ -16,20 +16,30 @@ final class DNSUpstreamGroup {
 
     let eventLoop: EventLoop
     let hedgeDelay: TimeAmount
+    let slowUpstreamDeadline: TimeAmount
 
-    private let entries: [Entry]
-    private let slowUpstreamDeadline: TimeAmount
+    private let primary: Entry
+    private let secondary: [Entry]
 
     init(
         eventLoop: EventLoop,
-        entries: [Entry],
+        primary: Entry,
+        secondary: [Entry],
         hedgeDelay: TimeAmount = .milliseconds(50),
         slowUpstreamDeadline: TimeAmount
     ) {
         self.eventLoop = eventLoop
-        self.entries = entries
+        self.primary = primary
+        self.secondary = secondary
         self.hedgeDelay = hedgeDelay
         self.slowUpstreamDeadline = slowUpstreamDeadline
+    }
+
+    func start() -> EventLoopFuture<Void> {
+        eventLoop.assertInEventLoop()
+        let all = [primary] + secondary
+        let futures = all.map { $0.upstream.start() }
+        return EventLoopFuture.andAllSucceed(futures, on: eventLoop)
     }
 
     func query(_ payload: Data, timeout: TimeAmount) -> EventLoopFuture<Data> {
@@ -37,53 +47,79 @@ final class DNSUpstreamGroup {
 
         let promise = eventLoop.makePromise(of: Data.self)
         var finished = false
+        var remaining = 1 + secondary.count
 
-        let overallTimeout = eventLoop.scheduleTask(in: timeout) {
-            guard !finished else { return }
+        let overallTask = eventLoop.scheduleTask(in: timeout) {
+            if finished { return }
             finished = true
             promise.fail(DNSUpstreamError.timeout)
         }
 
+        func finish(_ result: Result<Data, Error>, rtt: TimeAmount?, entry: Entry?) {
+            guard !finished else { return }
+            finished = true
+            overallTask.cancel()
+
+            if let entry, let rtt {
+                if case .success = result {
+                    if rtt > slowUpstreamDeadline {
+                        entry.breaker.onFailure()
+                    } else {
+                        entry.breaker.onSuccess()
+                    }
+                } else {
+                    entry.breaker.onFailure()
+                }
+            }
+
+            switch result {
+            case let .success(data):
+                promise.succeed(data)
+            case let .failure(err):
+                promise.fail(err)
+            }
+        }
+
+        func onFailure() {
+            remaining -= 1
+            if remaining == 0 && !finished {
+                finish(.failure(DNSUpstreamError.notReady), rtt: nil, entry: nil)
+            }
+        }
+
         func trySend(_ entry: Entry) {
             guard !finished else { return }
-            guard entry.breaker.allowRequest() else { return }
+            guard entry.breaker.allowRequest() else {
+                onFailure()
+                return
+            }
 
             let start = NIODeadline.now()
-            entry.upstream.query(payload, timeout: timeout).whenComplete { [weak self] result in
-                guard let self else {
-                    return
-                }
+            entry.upstream.query(payload, timeout: timeout).whenComplete { [weak self] res in
+                guard let self else { return }
                 self.eventLoop.execute {
                     guard !finished else { return }
-
                     let rtt = NIODeadline.now() - start
-                    switch result {
-                    case let .success(data):
-                        finished = true
-                        overallTimeout.cancel()
-                        if rtt > self.slowUpstreamDeadline {
-                            entry.breaker.onFailure()
-                        } else {
-                            entry.breaker.onSuccess()
-                        }
-                        promise.succeed(data)
 
-                    case .failure:
+                    switch res {
+                    case let .success(data):
+                        finish(.success(data), rtt: rtt, entry: entry)
+                    case let .failure(err):
                         entry.breaker.onFailure()
+                        onFailure()
+                        _ = err
                     }
                 }
             }
         }
 
-        // 1️⃣ primary
-        if let first = entries.first {
-            trySend(first)
-        }
+        // 1) primary
+        trySend(primary)
 
-        // 2️⃣ hedge
+        // 2) hedge to secondary
         eventLoop.scheduleTask(in: hedgeDelay) {
-            for entry in self.entries.dropFirst() {
-                trySend(entry)
+            for e in self.secondary {
+                trySend(e)
             }
         }
 
@@ -96,17 +132,15 @@ final class DNSUpstreamGroup {
         if eventLoop.inEventLoop {
             stopOnEventLoop()
         } else {
-            eventLoop.execute { [weak self] in
-                self?.stopOnEventLoop()
-            }
+            eventLoop.execute { [weak self] in self?.stopOnEventLoop() }
         }
     }
 
     private func stopOnEventLoop() {
         eventLoop.assertInEventLoop()
-
-        for entry in entries {
-            entry.upstream.stop()
+        primary.upstream.stop()
+        for e in secondary {
+            e.upstream.stop()
         }
     }
 }
