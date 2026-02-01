@@ -120,7 +120,7 @@ public final class DNSService: @unchecked Sendable {
         case .handleLocally:
             return handleSlow(buffer: buffer, fast: fast)
 
-        case let .refuse(rcode):
+        case .refuse(let rcode):
             if fast == nil {
                 return handleSlow(buffer: buffer, fast: fast)
             }
@@ -218,8 +218,8 @@ public final class DNSService: @unchecked Sendable {
         eventLoop.assertInEventLoop()
 
         if let v4 = parseInAddrArpa(query.question.name),
-           ipPool.isFakeIP(v4),
-           let domain = ipPool.reverseLookup(v4)
+            ipPool.isFakeIP(v4),
+            let domain = ipPool.reverseLookup(v4)
         {
             let resp = DNSMessageBuilder.builePTRResponse(
                 query: query,
