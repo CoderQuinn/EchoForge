@@ -9,6 +9,7 @@ import NIO
 
 protocol DNSBreaker: AnyObject {
     func allowRequest(now: NIODeadline) -> Bool
+    func isOpen(now: NIODeadline) -> Bool
     func onSuccess()
     func onFailure()
 }
@@ -34,6 +35,11 @@ final class DNSUpstreamBreaker: DNSBreaker {
         }
         degradedUntil = nil
         return true
+    }
+
+    func isOpen(now: NIODeadline = .now()) -> Bool {
+        guard let until = degradedUntil else { return false }
+        return now < until
     }
 
     func onSuccess() {
