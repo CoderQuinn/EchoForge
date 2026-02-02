@@ -28,7 +28,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
 
     // MARK: - Mock DNSUpstream
 
-    final class MockDNSUpstream: DNSUpstream {
+    final class MockDNSUpstream: DNSUpstream, @unchecked Sendable {
         let eventLoop: EventLoop
         let delay: TimeAmount
         let shouldFail: Bool
