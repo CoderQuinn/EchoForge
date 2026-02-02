@@ -392,6 +392,12 @@ public final class DNSService: @unchecked Sendable {
             guard let self else { return }
             self.eventLoop.assertInEventLoop()
 
+            // Guard against multiple calls: cancel existing task before creating a new one
+            if let existingTask = self.sweepTask {
+                existingTask.cancel()
+                self.sweepTask = nil
+            }
+
             let intervalSeconds = max(10, ttl / 2)
             let interval = Int64(intervalSeconds)
             self.sweepTask = self.eventLoop.scheduleRepeatedTask(
