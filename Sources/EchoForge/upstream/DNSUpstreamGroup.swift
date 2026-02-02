@@ -55,10 +55,13 @@ final class DNSUpstreamGroup {
             promise.fail(DNSUpstreamError.timeout)
         }
 
+        var hedgeTask: Scheduled<Void>?
+
         func finish(_ result: Result<Data, Error>, rtt: TimeAmount?, entry: Entry?) {
             guard !finished else { return }
             finished = true
             overallTask.cancel()
+            hedgeTask?.cancel()
 
             if let entry, let rtt {
                 if case .success = result {
@@ -117,7 +120,7 @@ final class DNSUpstreamGroup {
         trySend(primary)
 
         // 2) hedge to secondary
-        eventLoop.scheduleTask(in: hedgeDelay) {
+        hedgeTask = eventLoop.scheduleTask(in: hedgeDelay) {
             for entry in self.secondary {
                 trySend(entry)
             }
