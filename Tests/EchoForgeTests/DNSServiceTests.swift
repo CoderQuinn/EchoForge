@@ -28,6 +28,19 @@ final class DNSServiceTests: XCTestCase {
         super.tearDown()
     }
 
+    // MARK: - Helpers
+
+    private func extractFirstIPv4(from responseData: Data) -> IPv4Address? {
+        let (ips, _) = MinimalDNSParser.extractAnswers(from: FBDataPacketBuffer(responseData))
+        return ips.first
+    }
+
+    private func buildInAddrArpaName(for ip: IPv4Address) -> String? {
+        let octets = [UInt8](ip.rawValue)
+        guard octets.count == 4 else { return nil }
+        return "\(octets[3]).\(octets[2]).\(octets[1]).\(octets[0]).in-addr.arpa"
+    }
+
     // MARK: - A Query Tests
 
     func testAQueryCacheMiss() {
@@ -71,11 +84,15 @@ final class DNSServiceTests: XCTestCase {
         let buffer1 = FBDataPacketBuffer(queryData)
 
         var firstResponseData: Data?
+        var firstIP: IPv4Address?
 
         // First query - cache miss
         service.handleDNSPayload(buffer1, loop).whenComplete { result in
             if case let .success(data) = result {
                 firstResponseData = data
+                if let data {
+                    firstIP = self.extractFirstIPv4(from: data)
+                }
             }
             exp1.fulfill()
         }
@@ -88,10 +105,12 @@ final class DNSServiceTests: XCTestCase {
             switch result {
             case let .success(responseData):
                 XCTAssertNotNil(responseData)
-                // Both responses should return the same fake IP
-                let count1 = responseData?.count ?? 0
-                let count2 = firstResponseData?.count ?? 1
-                XCTAssertEqual(count1, count2)
+                if let data = responseData, let first = firstResponseData {
+                    let secondIP = self.extractFirstIPv4(from: data)
+                    let firstIP = self.extractFirstIPv4(from: first)
+                    XCTAssertNotNil(firstIP)
+                    XCTAssertEqual(secondIP, firstIP, "Fake IP should be stable for cached domain")
+                }
                 exp2.fulfill()
             case let .failure(error):
                 XCTFail("Second query failed: \(error)")
@@ -155,11 +174,15 @@ final class DNSServiceTests: XCTestCase {
         let buffer = FBDataPacketBuffer(queryData)
 
         var fakeIPResponse: Data?
+        var fakeIP: IPv4Address?
 
         // First, make an A query to get a fake IP assigned
         service.handleDNSPayload(buffer, loop).whenComplete { result in
             if case let .success(data) = result {
                 fakeIPResponse = data
+                if let data {
+                    fakeIP = self.extractFirstIPv4(from: data)
+                }
             }
             exp1.fulfill()
         }
@@ -167,12 +190,10 @@ final class DNSServiceTests: XCTestCase {
         wait(for: [exp1], timeout: 2.0)
 
         // Extract the fake IP from the response and construct PTR query
-        if let responseData = fakeIPResponse, responseData.count >= 12 {
-            // Parse to find the A record answer
-            // For simplicity, we'll construct a PTR query for a known fake IP range
-            // The fake IP pool typically uses 198.18.x.x range
-
-            // Build PTR query for a fake IP (e.g., 198.18.0.1 -> 1.0.18.198.in-addr.arpa)
+        if let responseData = fakeIPResponse, responseData.count >= 12,
+           let fakeIP, let inAddr = buildInAddrArpaName(for: fakeIP)
+        {
+            // Build PTR query for the actual fake IP
             var writer = FBPacketBufferWriter()
             writer.writeUInt16(0x5678) // ID
             writer.writeUInt16(0x0100) // Flags
@@ -180,7 +201,7 @@ final class DNSServiceTests: XCTestCase {
             writer.writeUInt16(0) // ANCOUNT
             writer.writeUInt16(0) // NSCOUNT
             writer.writeUInt16(0) // ARCOUNT
-            writer.name("1.0.18.198.in-addr.arpa")
+            writer.name(inAddr)
             writer.writeUInt16(12) // QTYPE: PTR
             writer.writeUInt16(1) // QCLASS: IN
 
@@ -193,8 +214,8 @@ final class DNSServiceTests: XCTestCase {
                     XCTAssertNotNil(responseData)
                     if let data = responseData {
                         XCTAssertGreaterThanOrEqual(data.count, 12)
-                        // Response should have an answer if it's a fake IP we know about
-                        // or be forwarded upstream if not
+                        let anCount = (UInt16(data[6]) << 8) | UInt16(data[7])
+                        XCTAssertEqual(anCount, 1, "PTR for fake IP should return an answer")
                     }
                     exp2.fulfill()
                 case let .failure(error):
@@ -244,8 +265,9 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "127.0.0.1",
-            upstreamPort: 19999 // Unlikely to be in use
+            upstreamTimeout: .milliseconds(300),
+            primaryUpstream: .init(host: "127.0.0.1", port: 19999),
+            secondaryUpstreams: []
         )
         let exp = expectation(description: "Upstream forwarding")
 
@@ -392,9 +414,20 @@ final class DNSServiceTests: XCTestCase {
         let malformedData = Data([0x12, 0x34, 0x01, 0x00, 0x00, 0x01]) // Too short
         let buffer = FBDataPacketBuffer(malformedData)
 
-        service.handleDNSPayload(buffer, loop).whenComplete { _ in
-            // Should handle gracefully (either error response or passthrough)
-            exp.fulfill()
+        service.handleDNSPayload(buffer, loop).whenComplete { result in
+            switch result {
+            case let .success(responseData):
+                XCTAssertNotNil(responseData)
+                if let data = responseData, data.count >= 4 {
+                    let flags = (UInt16(data[2]) << 8) | UInt16(data[3])
+                    let rcode = flags & 0x000F
+                    XCTAssertEqual(rcode, UInt16(DNSReturnStatus.formatError.rawValue))
+                    XCTAssertTrue((flags & 0x8000) != 0, "QR bit should be set")
+                }
+                exp.fulfill()
+            case let .failure(error):
+                XCTFail("Malformed query failed: \(error)")
+            }
         }
 
         wait(for: [exp], timeout: 2.0)
@@ -432,26 +465,36 @@ final class DNSServiceTests: XCTestCase {
         let queryData = DNSMessageBuilder.buildAQuery(domain: domain)
         let buffer = FBDataPacketBuffer(queryData)
 
+        var responseData: Data?
+
         // First, create a fake IP mapping
-        service.handleDNSPayload(buffer, loop).whenComplete { _ in
+        service.handleDNSPayload(buffer, loop).whenComplete { result in
+            if case let .success(data) = result {
+                responseData = data
+            }
             exp1.fulfill()
         }
 
         wait(for: [exp1], timeout: 2.0)
 
-        // Now test dial decision for a fake IP
-        let fakeIP = IPv4Address("198.18.0.2")! // Typical fake IP range
+        // Now test dial decision for the assigned fake IP
+        let fakeIP = responseData.flatMap { self.extractFirstIPv4(from: $0) }
 
-        service.resolveDialDecision(fakeIP, loop).whenComplete { result in
-            switch result {
-            case let .success(decision):
-                // Should recognize it as fake IP
-                XCTAssertTrue(decision.fromFakeIP)
-                // Might have dialHost or dialIP depending on cache state
-                exp2.fulfill()
-            case let .failure(error):
-                XCTFail("Dial decision failed: \(error)")
+        if let fakeIP {
+            service.resolveDialDecision(fakeIP, loop).whenComplete { result in
+                switch result {
+                case let .success(decision):
+                    // Should recognize it as fake IP
+                    XCTAssertTrue(decision.fromFakeIP)
+                    // Might have dialHost or dialIP depending on cache state
+                    exp2.fulfill()
+                case let .failure(error):
+                    XCTFail("Dial decision failed: \(error)")
+                }
             }
+        } else {
+            XCTFail("Failed to extract fake IP from response")
+            exp2.fulfill()
         }
 
         wait(for: [exp2], timeout: 2.0)
@@ -577,8 +620,9 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
-            upstreamPort: 53
+            upstreamTimeout: .milliseconds(300),
+            primaryUpstream: .init(host: "192.0.2.1", port: 53),
+            secondaryUpstreams: []
         )
 
         let exp1 = expectation(description: "First query")
@@ -622,8 +666,9 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
-            upstreamPort: 53
+            upstreamTimeout: .milliseconds(300),
+            primaryUpstream: .init(host: "192.0.2.1", port: 53),
+            secondaryUpstreams: []
         )
 
         let exp1 = expectation(description: "First query")
@@ -647,13 +692,12 @@ final class DNSServiceTests: XCTestCase {
 
         wait(for: [exp1], timeout: 1.0)
 
-        // Wait for prefetch to timeout (implementation uses .seconds(2) timeout)
-        // and cooldown to be set. Using 2.5s to ensure timeout completes.
-        loop.scheduleTask(in: .milliseconds(2500)) {
+        // Wait for prefetch to timeout and cooldown to be set.
+        loop.scheduleTask(in: .milliseconds(500)) {
             exp2.fulfill()
         }
 
-        wait(for: [exp2], timeout: 3.0)
+        wait(for: [exp2], timeout: 1.0)
 
         // Make another query during cooldown period
         // This should NOT trigger another prefetch due to cooldown
@@ -677,8 +721,9 @@ final class DNSServiceTests: XCTestCase {
         let service = DNSService(
             eventLoop: loop,
             ttl: 300,
-            upstreamHost: "192.0.2.1", // RFC 5737 TEST-NET-1, unreachable
-            upstreamPort: 53
+            upstreamTimeout: .milliseconds(300),
+            primaryUpstream: .init(host: "192.0.2.1", port: 53),
+            secondaryUpstreams: []
         )
 
         let exp1 = expectation(description: "Query 1")
