@@ -287,10 +287,8 @@ public final class DNSService: @unchecked Sendable {
 
         future.whenComplete { [weak self] _ in
             guard let self else { return }
-            self.eventLoop.execute {
-                self.eventLoop.assertInEventLoop()
-                self.upstreamInflight -= 1
-            }
+            self.eventLoop.assertInEventLoop()
+            self.upstreamInflight -= 1
         }
 
         return future
