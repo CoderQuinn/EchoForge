@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-##[0.5.0] - 2026-02-01
+## [0.5.0] - 2026-02-01
 
 ### Added
 - Multi-upstream DNS with hedge query support.

@@ -39,30 +39,56 @@ public final class DNSService: @unchecked Sendable {
     private let ttl: Int
     private let caches: DNSCache
     private let ipPool: FakeIPPool
-    private let upstream: DNSUpstreamUDPRelay
+    private let upstreams: DNSUpstreamGroup
+    private let upstreamTimeout: TimeAmount
 
     private var inflightPrefetch: Set<String> = []
-    private let prefetchCooldown: TimeAmount = .seconds(10)
+    private let prefetchCooldown: TimeAmount = .seconds(3)
     private var prefetchCooldownUntils: [String: NIODeadline] = [:]
 
     private let breaker = DNSUpstreamBreaker()
-
     private var sweepTask: RepeatedTask?
+
+    private let slowUpstreamDeadline: TimeAmount
+    private var upstreamInflight: Int = 0
+    private let maxUpstreamInflight: Int = 64
 
     public init(
         eventLoop: EventLoop,
         ttl: Int = 300,
-        upstreamHost: String = "8.8.8.8",
-        upstreamPort: Int = 53
+        slowUpstreamDeadline: TimeAmount = .milliseconds(800),
+        hedgeDelay: TimeAmount = .milliseconds(50),
+        upstreamTimeout: TimeAmount = .seconds(3),
+        primaryUpstream: Upstream = .init(host: "8.8.8.8", port: 53),
+        secondaryUpstreams: [Upstream] = [.init(host: "1.1.1.1", port: 53)]
     ) {
         self.eventLoop = eventLoop
         self.ttl = ttl
+        self.slowUpstreamDeadline = slowUpstreamDeadline
+
         caches = DNSCache(eventLoop: eventLoop)
         ipPool = FakeIPPool(on: eventLoop)
-        upstream = DNSUpstreamUDPRelay(
-            eventLoop: eventLoop,
-            upstream: .init(host: upstreamHost, port: UInt16(upstreamPort))
+
+        let primary = DNSUpstreamGroup.Entry(
+            upstream: DNSUpstreamUDPRelay(eventLoop: eventLoop, upstream: primaryUpstream),
+            breaker: DNSUpstreamBreaker()
         )
+        let secondary = secondaryUpstreams.map {
+            DNSUpstreamGroup.Entry(
+                upstream: DNSUpstreamUDPRelay(eventLoop: eventLoop, upstream: $0),
+                breaker: DNSUpstreamBreaker()
+            )
+        }
+
+        upstreams = DNSUpstreamGroup(
+            eventLoop: eventLoop,
+            primary: primary,
+            secondary: secondary,
+            hedgeDelay: hedgeDelay,
+            slowUpstreamDeadline: slowUpstreamDeadline
+        )
+
+        self.upstreamTimeout = upstreamTimeout
     }
 
     // MARK: - Public API (any loop)
@@ -80,7 +106,8 @@ public final class DNSService: @unchecked Sendable {
             }
             eventLoop.assertInEventLoop()
             return self.handlerInternal(buffer, fast: fast, decision: decision)
-        }.hop(to: callerLoop)
+        }
+        .hop(to: callerLoop)
     }
 
     // MARK: - Internal (eventLoop only)
@@ -121,7 +148,7 @@ public final class DNSService: @unchecked Sendable {
         do {
             query = try MinimalDNSParser.parseQuery(buffer)
         } catch {
-            EFLog.core("DNS slow parse failed, fallback to UDP direct: \(error)")
+            EFLog.core("DNS slow parse failed: \(error)")
             return makeFormError(fast: fast)
         }
 
@@ -148,7 +175,7 @@ public final class DNSService: @unchecked Sendable {
         return eventLoop.makeSucceededFuture(resp)
     }
 
-    // MARK: - Query Handlers
+    // MARK: - Query handlers
 
     private func handleAQuery(query: DNSQuery, buffer: FBPacketBuffer) -> EventLoopFuture<Data?> {
         eventLoop.assertInEventLoop()
@@ -199,8 +226,6 @@ public final class DNSService: @unchecked Sendable {
         )
     }
 
-    // MARK: - PTR(fake-ip)
-
     private func handlePTRQuery(query: DNSQuery, buffer: FBPacketBuffer, fast: SniffedDNSQuery?)
         -> EventLoopFuture<Data?>
     {
@@ -232,9 +257,15 @@ public final class DNSService: @unchecked Sendable {
             return eventLoop.makeSucceededFuture(nil)
         }
 
+        if upstreamInflight >= maxUpstreamInflight {
+            breaker.onFailure()
+            return eventLoop.makeSucceededFuture(nil)
+        }
+        upstreamInflight += 1
+
         let payload = buffer.materialize()
 
-        return upstream.query(payload, timeout: .seconds(3))
+        let future: EventLoopFuture<Data?> = upstreams.query(payload, timeout: upstreamTimeout)
             .map { [weak self] responseData -> Data? in
                 self?.breaker.onSuccess()
 
@@ -253,14 +284,28 @@ public final class DNSService: @unchecked Sendable {
                 }
                 return nil
             }
+
+        future.whenComplete { [weak self] _ in
+            guard let self else { return }
+            self.eventLoop.execute {
+                self.eventLoop.assertInEventLoop()
+                self.upstreamInflight -= 1
+            }
+        }
+
+        return future
     }
+
+    // MARK: - Dial decision
 
     public func resolveDialDecision(_ dstIP: IPv4Address, _ callerLoop: EventLoop)
         -> EventLoopFuture<DialDecision>
     {
         eventLoop.flatSubmit { [weak self] in
             let direct = DialDecision(dialIP: dstIP, dialHost: nil, fromFakeIP: false)
-            guard let self else { return callerLoop.makeSucceededFuture(direct) }
+            guard let self else {
+                return callerLoop.makeSucceededFuture(direct)
+            }
 
             self.eventLoop.assertInEventLoop()
             guard self.ipPool.isFakeIP(dstIP) else {
@@ -284,7 +329,8 @@ public final class DNSService: @unchecked Sendable {
             return self.eventLoop.makeSucceededFuture(
                 DialDecision(dialIP: nil, dialHost: domain, fromFakeIP: true)
             )
-        }.hop(to: callerLoop)
+        }
+        .hop(to: callerLoop)
     }
 
     // MARK: - Prefetch A (best-effort)
@@ -304,7 +350,7 @@ public final class DNSService: @unchecked Sendable {
         }
 
         let payload = DNSMessageBuilder.buildAQuery(domain: domain)
-        upstream.query(payload, timeout: .seconds(2)).whenComplete { [weak self] result in
+        upstreams.query(payload, timeout: upstreamTimeout).whenComplete { [weak self] result in
             guard let self else { return }
             self.eventLoop.execute {
                 self.inflightPrefetch.remove(domain)
@@ -330,17 +376,12 @@ public final class DNSService: @unchecked Sendable {
         guard var entry = caches.lookup(key) else { return }
 
         let (ips, ttls) = MinimalDNSParser.extractAnswers(from: FBDataPacketBuffer(response))
-
         if ips.isEmpty { return }
 
-        precondition(ips.count == ttls.count)
+        var maxTTL = ttls.max() ?? 0
+        maxTTL = max(30, maxTTL)
+        let cacheTTL = min(maxTTL, ttl)
 
-        var maxUpstreamTTL = ttls.max() ?? 0
-        maxUpstreamTTL = max(30, maxUpstreamTTL)
-
-        let cacheTTL = min(maxUpstreamTTL, ttl)
-
-        let fakeIP = entry.fakeIP
         entry.realIPs = ips
         entry.expireAt = .now() + .seconds(Int64(cacheTTL))
         caches.insert(entry)
@@ -362,6 +403,8 @@ public final class DNSService: @unchecked Sendable {
                 guard let self else { return }
                 self.caches.sweepExpired { _ in }
             }
+
+            _ = self.upstreams.start()
         }
     }
 
@@ -371,7 +414,7 @@ public final class DNSService: @unchecked Sendable {
             self.eventLoop.assertInEventLoop()
             self.sweepTask?.cancel()
             self.sweepTask = nil
-            self.upstream.stop()
+            self.upstreams.stop()
         }
     }
 

@@ -9,6 +9,7 @@ import NIO
 
 protocol DNSBreaker: AnyObject {
     func allowRequest(now: NIODeadline) -> Bool
+    func isOpen(now: NIODeadline) -> Bool
     func onSuccess()
     func onFailure()
 }
@@ -19,7 +20,7 @@ final class DNSUpstreamBreaker: DNSBreaker {
     private var failureStreak: Int = 0
     private var degradedUntil: NIODeadline?
 
-    init(failThreshold: Int = 3, degradeDuration: TimeAmount = .seconds(5)) {
+    init(failThreshold: Int = 3, degradeDuration: TimeAmount = .seconds(3)) {
         self.failThreshold = failThreshold
         self.degradeDuration = degradeDuration
     }
@@ -36,7 +37,11 @@ final class DNSUpstreamBreaker: DNSBreaker {
         return true
     }
 
-    /// Call on any successful upstream response
+    func isOpen(now: NIODeadline = .now()) -> Bool {
+        guard let until = degradedUntil else { return false }
+        return now < until
+    }
+
     func onSuccess() {
         failureStreak = 0
         if degradedUntil != nil {
