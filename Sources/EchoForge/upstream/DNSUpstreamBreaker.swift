@@ -25,7 +25,7 @@ final class DNSUpstreamBreaker: DNSBreaker {
         self.failThreshold = failThreshold
         self.degradeDuration = degradeDuration
     }
-    
+
     func isOpen(now: NIODeadline = .now()) -> Bool {
         guard let until = degradedUntil else { return false }
         return now < until
