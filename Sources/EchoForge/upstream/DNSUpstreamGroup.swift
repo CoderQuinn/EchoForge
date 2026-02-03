@@ -8,7 +8,7 @@
 import Foundation
 import NIO
 
-final class DNSUpstreamGroup {
+final class DNSUpstreamGroup: @unchecked Sendable {
     struct Entry {
         let upstream: DNSUpstream
         let breaker: DNSUpstreamBreaker
