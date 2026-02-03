@@ -67,11 +67,13 @@ final class DNSUpstreamGroupTests: XCTestCase {
         }
 
         func start() -> EventLoopFuture<Void> {
+            eventLoop.assertInEventLoop()
             startCalled = true
             return eventLoop.makeSucceededFuture(())
         }
 
         func stop() {
+            eventLoop.assertInEventLoop()
             stopCalled = true
         }
     }
