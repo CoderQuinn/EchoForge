@@ -2,15 +2,15 @@
 # EchoForge
 
 
-[![CI](https://github.com/CoderQuinn/TunForge/actions/workflows/ci.yml/badge.svg)](
-https://github.com/CoderQuinn/TunForge/actions/workflows/ci.yml
+[![CI](https://github.com/CoderQuinn/EchoForge/actions/workflows/ci.yml/badge.svg)](
+https://github.com/CoderQuinn/EchoForge/actions/workflows/ci.yml
 )
 ![Status](https://img.shields.io/badge/status-core_stable_(pre--1.0)-blue)
 ![Coverage](https://img.shields.io/badge/Coverage-83.50%25-brightgreen)
 ![Swift](https://img.shields.io/badge/Swift-6.1-orange?logo=swift)
 ![Platform](https://img.shields.io/badge/Platform-iOS%2013%2B%20%7C%20macOS%2011%2B-blue)
 ![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen)
-![License](https://img.shields.io/github/license/CoderQuinn/TunForge)
+![License](https://img.shields.io/github/license/CoderQuinn/EchoForge)
 
 
 **EchoForge** is a lightweight, embeddable DNS component written in Swift.
@@ -23,7 +23,9 @@ It provides a fast path DNS classifier, a minimal RFC1035 parser, a fake IPv4 po
 - **Minimal RFC1035 Parser**: slow path ensures correctness and pointer handling.
 - **Fake IPv4 Pool**: RFC 6890 `198.18.0.0/16` with reverse mapping.
 - **TTL-Aware Cache**: in-memory cache for A responses with sweeping.
+- **Multi-Upstream DNS**: parallel upstreams with hedge queries to reduce tail latency.
 - **UDP Upstream Relay**: SwiftNIO-based UDP/53 relay with txid rewrite/restore.
+- **Bounded DNS Execution**: all DNS queries are guaranteed to complete within a fixed time window.
 - **SwiftNIO** for non-blocking performance.
 - **Policy Engine**: routes queries to local handling, upstream passthrough, or refusal.
 
@@ -34,7 +36,7 @@ Add the package to your `Package.swift` dependencies:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/CoderQuinn/EchoForge.git", from: "0.4.0")
+    .package(url: "https://github.com/CoderQuinn/EchoForge.git", from: "0.5.0")
 ]
 ```
 
@@ -67,7 +69,7 @@ let loop = group.next()
 let service = DNSService(eventLoop: loop)
 service.startSweep() // optional: enable periodic cache sweep
 
-// Handle an incoming DNS UDP payload (Data) on any loop
+// Handle an incoming DNS UDP payload (can be called from any EventLoop)
 // FBDataPacketBuffer is provided by ForgeBase
 let incoming: Data = /* UDP payload */ Data()
 let buf = FBDataPacketBuffer(incoming)
@@ -89,6 +91,7 @@ Current unit test coverage: **83.50%**.
 - Two-stage pipeline: fast sniff (optimistic) then minimal parser (correctness).
 - Fake-IP pool uses `198.18.0.0/16` (RFC 6890 reserved block) to avoid collisions.
 - Policy engine keeps the fast path lightweight and defers correctness to the parser.
+- DNS upstream handling is strictly bounded to prevent slow or broken upstreams from stalling the system.
 
 
 ## Roadmap / TODO
