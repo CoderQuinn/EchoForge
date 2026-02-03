@@ -42,6 +42,7 @@ final class DNSUpstreamBreaker: DNSBreaker {
         return now < until
     }
 
+    /// Call on successful upstream response
     func onSuccess() {
         failureStreak = 0
         if degradedUntil != nil {
