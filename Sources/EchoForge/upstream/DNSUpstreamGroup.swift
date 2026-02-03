@@ -76,9 +76,9 @@ final class DNSUpstreamGroup {
             }
 
             switch result {
-            case let .success(data):
+            case .success(let data):
                 promise.succeed(data)
-            case let .failure(err):
+            case .failure(let err):
                 promise.fail(err)
             }
         }
@@ -105,9 +105,9 @@ final class DNSUpstreamGroup {
                     let rtt = NIODeadline.now() - start
 
                     switch res {
-                    case let .success(data):
+                    case .success(let data):
                         finish(.success(data), rtt: rtt, entry: entry)
-                    case let .failure(err):
+                    case .failure(let err):
                         entry.breaker.onFailure()
                         onFailure()
                         _ = err

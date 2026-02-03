@@ -24,7 +24,7 @@ final class DNSUpstreamBreaker: DNSBreaker {
         self.failThreshold = failThreshold
         self.degradeDuration = degradeDuration
     }
-    
+
     /// Whether a new upstream request is allowed *now*
     func allowRequest(now: NIODeadline = .now()) -> Bool {
         guard let until = degradedUntil else {
