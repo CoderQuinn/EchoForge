@@ -69,11 +69,11 @@ public struct DNSQuestion: Sendable {
     public let qclass: DNSClass
 }
 
-public extension DNSQuestion {
+extension DNSQuestion {
     /// Serialize question to DNS wire format:
     /// [QNAME][QTYPE][QCLASS]
     @available(*, deprecated, renamed: "materialize")
-    func toData() -> Data {
+    public func toData() -> Data {
         materialize()
     }
 
