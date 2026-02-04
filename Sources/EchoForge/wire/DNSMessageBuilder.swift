@@ -5,9 +5,9 @@
 //  Created by MagicianQuinn on 2026/1/14.
 //
 
+import ForgeBase
 import Foundation
 import Network
-import ForgeBase
 
 public enum DNSMessageBuilder {
 
@@ -23,12 +23,11 @@ public enum DNSMessageBuilder {
     /// Build DNS A query
     public static func buildAQuery(domain: String) -> Data {
         EFLog.debug("build A query domain=\(domain)")
-        let id = UInt16.random(in: 1 ... UInt16.max)
+        let id = UInt16.random(in: 1...UInt16.max)
 
         // flags: RD=1
         let flags: UInt16 = 0x0100
         var writer = FBPacketBufferWriter(capacity: queryCapacity)
-
 
         writer.writeUInt16(id)
         writer.writeUInt16(flags)
