@@ -408,7 +408,9 @@ public final class DNSService: @unchecked Sendable {
                 self.caches.sweepExpired { _ in }
             }
 
-            _ = self.upstreams.start()
+            self.upstreams.start().whenFailure { error in
+                print("DNSService upstreams failed to start: \(error)")
+            }
         }
     }
 
