@@ -10,8 +10,8 @@
 
 import ForgeBase
 import Foundation
-import NIO
 import Network
+import NIO
 
 /// Fake IPv4 pool for DNS interception.
 ///
@@ -87,11 +87,11 @@ public final class FakeIPPool: @unchecked Sendable {
             return nil
         }
 
-        for _ in 0..<capacity {
+        for _ in 0 ..< capacity {
             let host = offset
             offset += 1
             if offset >= hostMask {
-                offset = 2  // wrap back to first usable fake IP
+                offset = 2 // wrap back to first usable fake IP
             }
 
             // Skip:
@@ -105,7 +105,7 @@ public final class FakeIPPool: @unchecked Sendable {
             let candidateBE = baseBE | host
 
             guard let ip = FBIPv4(beValue: candidateBE).asNetworkIPv4Address,
-                ipToDomain[ip] == nil
+                  ipToDomain[ip] == nil
             else {
                 continue
             }

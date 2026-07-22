@@ -46,7 +46,7 @@ public enum DNSReturnStatus: Equatable, Sendable {
         case .nameError: return 3
         case .notImplemented: return 4
         case .refused: return 5
-        case .reserved(let raw): return raw & 0x0F
+        case let .reserved(raw): return raw & 0x0F
         }
     }
 
