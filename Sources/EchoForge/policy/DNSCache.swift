@@ -8,8 +8,8 @@
 //
 
 import Foundation
-import NIO
 import Network
+import NIO
 
 public struct DNSCacheKey: Hashable, Sendable {
     let domain: String

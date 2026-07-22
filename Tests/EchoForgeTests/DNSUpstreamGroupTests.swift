@@ -100,7 +100,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
         loop.execute {
             upstreamGroup.query(Data([0x00, 0x01]), timeout: .seconds(1)).whenComplete { result in
                 switch result {
-                case .success(let data):
+                case let .success(data):
                     XCTAssertEqual(data, Data([0x12, 0x34]), "Should get primary response")
                     XCTAssertEqual(primary.queryCount, 1, "Primary should be queried once")
                     XCTAssertEqual(
@@ -108,7 +108,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                         0,
                         "Secondary should not be queried (hedge delay not reached)"
                     )
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("Query should succeed: \(error)")
                 }
                 exp.fulfill()
@@ -148,11 +148,11 @@ final class DNSUpstreamGroupTests: XCTestCase {
         loop.execute {
             upstreamGroup.query(Data([0x00, 0x01]), timeout: .seconds(1)).whenComplete { result in
                 switch result {
-                case .success(let data):
+                case let .success(data):
                     XCTAssertEqual(data, Data([0xCC, 0xDD]), "Should get secondary response")
                     XCTAssertEqual(primary.queryCount, 1, "Primary should be queried")
                     XCTAssertEqual(secondary.queryCount, 1, "Secondary should be queried")
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("Query should succeed: \(error)")
                 }
                 exp.fulfill()
@@ -199,7 +199,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                 switch result {
                 case .success:
                     XCTFail("Query should fail when all upstreams fail")
-                case .failure(let error):
+                case let .failure(error):
                     XCTAssertEqual(
                         error as? DNSUpstreamError,
                         .notReady,
@@ -242,7 +242,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                 switch result {
                 case .success:
                     XCTFail("Query should timeout")
-                case .failure(let error):
+                case let .failure(error):
                     XCTAssertEqual(
                         error as? DNSUpstreamError,
                         .timeout,
@@ -284,7 +284,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                 switch result {
                 case .success:
                     XCTFail("Query should fail when all breakers are open")
-                case .failure(let error):
+                case let .failure(error):
                     XCTAssertEqual(
                         error as? DNSUpstreamError,
                         .notReady,
@@ -337,7 +337,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
         loop.execute {
             upstreamGroup.query(Data([0x00, 0x01]), timeout: .seconds(1)).whenComplete { result in
                 switch result {
-                case .success(let data):
+                case let .success(data):
                     XCTAssertEqual(data, Data([0xFF, 0xEE]), "Should get secondary response")
                     XCTAssertEqual(
                         primary.queryCount,
@@ -345,7 +345,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                         "Primary should not be queried (blocked by breaker)"
                     )
                     XCTAssertEqual(secondary.queryCount, 1, "Secondary should be queried")
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("Query should succeed via secondary: \(error)")
                 }
                 exp.fulfill()
@@ -362,7 +362,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
 
         let slowPrimary = MockDNSUpstream(
             eventLoop: loop,
-            delay: .milliseconds(250)  // Slower than slowUpstreamDeadline (200ms)
+            delay: .milliseconds(250) // Slower than slowUpstreamDeadline (200ms)
         )
 
         let primaryBreaker = DNSUpstreamBreaker(failThreshold: 1, degradeDuration: .seconds(10))
@@ -373,7 +373,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
             primary: .init(upstream: slowPrimary, breaker: primaryBreaker),
             secondary: [],
             hedgeDelay: .milliseconds(50),
-            slowUpstreamDeadline: .milliseconds(200)  // Threshold for "slow" response
+            slowUpstreamDeadline: .milliseconds(200) // Threshold for "slow" response
         )
 
         loop.execute {
@@ -393,7 +393,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                         switch secondResult {
                         case .success:
                             XCTFail("Second query should fail when breaker is open")
-                        case .failure(let error):
+                        case let .failure(error):
                             XCTAssertEqual(
                                 error as? DNSUpstreamError,
                                 .notReady,
@@ -407,7 +407,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                         }
                         exp.fulfill()
                     }
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("First query should succeed: \(error)")
                     exp.fulfill()
                 }
@@ -424,7 +424,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
 
         let fastPrimary = MockDNSUpstream(
             eventLoop: loop,
-            delay: .milliseconds(50)  // Faster than slowUpstreamDeadline (200ms)
+            delay: .milliseconds(50) // Faster than slowUpstreamDeadline (200ms)
         )
 
         let primaryBreaker = DNSUpstreamBreaker(failThreshold: 1, degradeDuration: .seconds(10))
@@ -457,12 +457,12 @@ final class DNSUpstreamGroupTests: XCTestCase {
                                 2,
                                 "Primary should be queried twice"
                             )
-                        case .failure(let error):
+                        case let .failure(error):
                             XCTFail("Second query should succeed: \(error)")
                         }
                         exp.fulfill()
                     }
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("First query should succeed: \(error)")
                     exp.fulfill()
                 }
@@ -503,7 +503,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                     XCTAssertTrue(primary.startCalled, "Primary start should be called")
                     XCTAssertTrue(secondary1.startCalled, "Secondary1 start should be called")
                     XCTAssertTrue(secondary2.startCalled, "Secondary2 start should be called")
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("Start should succeed: \(error)")
                 }
                 exp.fulfill()
@@ -548,13 +548,13 @@ final class DNSUpstreamGroupTests: XCTestCase {
     func testMultipleSecondaryUpstreams() {
         let exp = expectation(description: "Multiple secondary upstreams")
 
-        let primary = MockDNSUpstream(eventLoop: loop, delay: .seconds(10))  // Very slow
+        let primary = MockDNSUpstream(eventLoop: loop, delay: .seconds(10)) // Very slow
         let secondary1 = MockDNSUpstream(eventLoop: loop, delay: .milliseconds(100))
         let secondary2 = MockDNSUpstream(
             eventLoop: loop,
             delay: .milliseconds(20),
             responseData: Data([0x11, 0x22])
-        )  // Fastest
+        ) // Fastest
 
         let primaryBreaker = DNSUpstreamBreaker()
         let secondaryBreaker1 = DNSUpstreamBreaker()
@@ -574,7 +574,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
         loop.execute {
             upstreamGroup.query(Data([0x00, 0x01]), timeout: .seconds(1)).whenComplete { result in
                 switch result {
-                case .success(let data):
+                case let .success(data):
                     XCTAssertEqual(
                         data,
                         Data([0x11, 0x22]),
@@ -583,7 +583,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                     XCTAssertEqual(primary.queryCount, 1, "Primary should be queried")
                     XCTAssertEqual(secondary1.queryCount, 1, "Secondary1 should be queried")
                     XCTAssertEqual(secondary2.queryCount, 1, "Secondary2 should be queried")
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("Query should succeed: \(error)")
                 }
                 exp.fulfill()
@@ -623,7 +623,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                         // We just verify that the primary succeeded and the query completed
                         exp.fulfill()
                     }
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("Query should succeed: \(error)")
                     exp.fulfill()
                 }
@@ -658,7 +658,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                 switch result {
                 case .success:
                     XCTFail("Query should timeout")
-                case .failure(let error):
+                case let .failure(error):
                     XCTAssertEqual(
                         error as? DNSUpstreamError,
                         .timeout,
@@ -704,7 +704,7 @@ final class DNSUpstreamGroupTests: XCTestCase {
                         primaryBreaker.isOpen(),
                         "Breaker should not be open after successful query"
                     )
-                case .failure(let error):
+                case let .failure(error):
                     XCTFail("Query should succeed: \(error)")
                 }
                 exp.fulfill()
