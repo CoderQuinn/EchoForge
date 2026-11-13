@@ -10,7 +10,7 @@ https://github.com/CoderQuinn/TunForge/actions/workflows/ci.yml
 ![Swift](https://img.shields.io/badge/Swift-6.1-orange?logo=swift)
 ![Platform](https://img.shields.io/badge/Platform-iOS%2013%2B%20%7C%20macOS%2011%2B-blue)
 ![SPM](https://img.shields.io/badge/SPM-compatible-brightgreen)
-![License](https://img.shields.io/github/license/CoderQuinn/TunForge)
+![License](https://img.shields.io/github/license/CoderQuinn/EchoForge)
 
 
 **EchoForge** is a lightweight, embeddable DNS component written in Swift.
@@ -109,4 +109,8 @@ Patches, tests, and documentation improvements are welcome! Please open a PR aga
 - ForgeBase / ForgeLogKit: https://github.com/CoderQuinn
 
 ## License
-Apache 2.0 License.
+
+First-party material is licensed under **MPL-2.0**; see [LICENSE](LICENSE).
+See [COPYRIGHT.md](COPYRIGHT.md) for the exact scope, third-party exclusions,
+retained historical grants and copyright notices. No commercial-license or
+store-distribution exception is granted here.
